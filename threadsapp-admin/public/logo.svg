@@ -1,0 +1,5 @@
+<svg width="160" height="42" viewBox="0 0 160 42" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="42" height="42" rx="12" fill="#FF6B6B"/>
+  <path d="M12 14H30V18H23V30H19V18H12V14Z" fill="white"/>
+  <text x="52" y="27" fill="#1A1F36" font-family="Arial, sans-serif" font-size="20" font-weight="700">ThreadsApp</text>
+</svg>

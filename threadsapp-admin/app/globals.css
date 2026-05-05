@@ -1,0 +1,35 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  @apply bg-background text-foreground antialiased;
+}
+
+.fabric-bg {
+  background-color: #1a1f36;
+  background-image:
+    radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.12) 1px, transparent 0),
+    linear-gradient(135deg, rgba(255, 107, 107, 0.12), transparent 30%);
+  background-size: 24px 24px, auto;
+}
+
+.prose-editor h1 {
+  @apply text-2xl font-semibold;
+}
+
+.prose-editor h2 {
+  @apply text-xl font-semibold;
+}
+
+.prose-editor ul {
+  @apply list-disc pl-5;
+}
+
+.prose-editor ol {
+  @apply list-decimal pl-5;
+}
