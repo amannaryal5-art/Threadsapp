@@ -11,6 +11,8 @@ import { AppInput } from "@/components/shared/AppInput";
 import { useLogin } from "@/hooks/useAuth";
 import { loginSchema } from "@/validations/auth.schema";
 import type { z } from "zod";
+import type { Route } from "next";
+
 
 type FormData = z.infer<typeof loginSchema>;
 
@@ -32,7 +34,7 @@ export default function LoginPage() {
         eyebrow="Welcome Back"
         title="Sign in and pick up right where you left off."
         description="Access your bag, wishlist, saved addresses, and order history in one place with a fast and familiar login experience."
-        alternateHref="/register"
+        alternateHref={"/register" as Route}
         alternateLabel="Create account"
         alternateText="New to ThreadsApp?"
       >

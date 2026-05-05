@@ -24,7 +24,10 @@ export default function EditProfilePage() {
     <main className="container py-8">
       <div className="grid gap-8 lg:grid-cols-[280px_1fr]">
         <ProfileSidebar />
-        <form onSubmit={handleSubmit((values) => mutation.mutate(values))} className="rounded-[32px] bg-white p-6 shadow-soft">
+        <form onSubmit={handleSubmit((values) => mutation.mutate({
+          ...values,
+          gender: values.gender as "male" | "female" | "other" | "prefer_not_to_say" | null | undefined
+        }))} className="rounded-[32px] bg-white p-6 shadow-soft">
           <h1 className="text-3xl font-bold text-secondary">Edit Profile</h1>
           <div className="mt-6 grid gap-4 md:grid-cols-2">
             <AppInput label="Name" {...register("name")} />
