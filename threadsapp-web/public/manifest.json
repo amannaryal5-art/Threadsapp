@@ -1,0 +1,16 @@
+{
+  "name": "ThreadsApp",
+  "short_name": "ThreadsApp",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F8F8F8",
+  "theme_color": "#FF6B6B",
+  "description": "ThreadsApp fashion ecommerce storefront",
+  "icons": [
+    {
+      "src": "/logo.svg",
+      "sizes": "192x48",
+      "type": "image/svg+xml"
+    }
+  ]
+}

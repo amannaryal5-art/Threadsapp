@@ -1,0 +1,45 @@
+const { DataTypes } = require('sequelize');
+
+module.exports = (sequelize) =>
+  sequelize.define(
+    'Order',
+    {
+      id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
+      orderNumber: { type: DataTypes.STRING, allowNull: false, unique: true },
+      userId: { type: DataTypes.UUID, allowNull: false },
+      addressId: { type: DataTypes.UUID, allowNull: false },
+      status: {
+        type: DataTypes.ENUM(
+          'pending_payment',
+          'confirmed',
+          'processing',
+          'shipped',
+          'out_for_delivery',
+          'delivered',
+          'cancelled',
+          'return_requested',
+          'return_picked',
+          'refunded',
+        ),
+        defaultValue: 'pending_payment',
+      },
+      paymentStatus: { type: DataTypes.ENUM('pending', 'paid', 'failed', 'refunded'), defaultValue: 'pending' },
+      subtotal: { type: DataTypes.DECIMAL(10, 2), allowNull: false },
+      discountAmount: { type: DataTypes.DECIMAL(10, 2), defaultValue: 0 },
+      couponCode: { type: DataTypes.STRING },
+      couponDiscount: { type: DataTypes.DECIMAL(10, 2), defaultValue: 0 },
+      shippingCharge: { type: DataTypes.DECIMAL(10, 2), defaultValue: 0 },
+      taxAmount: { type: DataTypes.DECIMAL(10, 2), allowNull: false },
+      totalAmount: { type: DataTypes.DECIMAL(10, 2), allowNull: false },
+      shiprocketOrderId: { type: DataTypes.STRING },
+      shiprocketShipmentId: { type: DataTypes.STRING },
+      trackingNumber: { type: DataTypes.STRING },
+      courierName: { type: DataTypes.STRING },
+      trackingUrl: { type: DataTypes.STRING },
+      estimatedDelivery: { type: DataTypes.DATEONLY },
+      deliveredAt: { type: DataTypes.DATE },
+      notes: { type: DataTypes.TEXT },
+      invoiceUrl: { type: DataTypes.STRING },
+    },
+    { tableName: 'Orders' },
+  );

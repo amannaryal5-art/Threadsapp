@@ -1,0 +1,59 @@
+{
+  "info": {
+    "name": "ThreadsApp API",
+    "_postman_id": "threadsapp-api-collection",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5000/api/v1" },
+    { "key": "accessToken", "value": "" },
+    { "key": "refreshToken", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "GET Health",
+          "request": { "method": "GET", "url": "{{baseUrl}}/health" }
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        { "name": "Send OTP", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"phone\": \"+919999999999\"\n}" }, "url": "{{baseUrl}}/auth/send-otp" } },
+        { "name": "Verify OTP", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"phone\": \"+919999999999\",\n  \"otp\": \"123456\"\n}" }, "url": "{{baseUrl}}/auth/verify-otp" } },
+        { "name": "Register", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"phone\": \"+919999999999\",\n  \"name\": \"Aarav Sharma\",\n  \"email\": \"aarav@example.com\",\n  \"password\": \"Secret123\",\n  \"gender\": \"male\"\n}" }, "url": "{{baseUrl}}/auth/register" } },
+        { "name": "Login", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"email\": \"aarav@example.com\",\n  \"password\": \"Secret123\"\n}" }, "url": "{{baseUrl}}/auth/login" } },
+        { "name": "Refresh Token", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}" }, "url": "{{baseUrl}}/auth/refresh-token" } },
+        { "name": "Logout", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}" }, "url": "{{baseUrl}}/auth/logout" } },
+        { "name": "Forgot Password", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"email\": \"aarav@example.com\"\n}" }, "url": "{{baseUrl}}/auth/forgot-password" } },
+        { "name": "Reset Password", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"token\": \"reset-token\",\n  \"password\": \"NewSecret123\"\n}" }, "url": "{{baseUrl}}/auth/reset-password" } },
+        { "name": "Change Password", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }], "body": { "mode": "raw", "raw": "{\n  \"currentPassword\": \"Secret123\",\n  \"newPassword\": \"Secret456\"\n}" }, "url": "{{baseUrl}}/auth/change-password" } }
+      ]
+    },
+    {
+      "name": "Core API",
+      "description": "Representative requests for all remaining route groups. Update IDs after seeding.",
+      "item": [
+        { "name": "Get Profile", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/users/profile" } },
+        { "name": "Get Categories", "request": { "method": "GET", "url": "{{baseUrl}}/categories" } },
+        { "name": "Get Brands", "request": { "method": "GET", "url": "{{baseUrl}}/brands" } },
+        { "name": "List Products", "request": { "method": "GET", "url": "{{baseUrl}}/products?sort=popular&page=1&limit=20" } },
+        { "name": "Get Product Detail", "request": { "method": "GET", "url": "{{baseUrl}}/products/cotton-crew-tee" } },
+        { "name": "Search Products", "request": { "method": "GET", "url": "{{baseUrl}}/search?q=blue+kurta&page=1&limit=20" } },
+        { "name": "Get Cart", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/cart" } },
+        { "name": "Add To Cart", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }], "body": { "mode": "raw", "raw": "{\n  \"productId\": \"product-uuid\",\n  \"variantId\": \"variant-uuid\",\n  \"quantity\": 1\n}" }, "url": "{{baseUrl}}/cart/add" } },
+        { "name": "Toggle Wishlist", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }], "body": { "mode": "raw", "raw": "{\n  \"productId\": \"product-uuid\"\n}" }, "url": "{{baseUrl}}/wishlist/toggle" } },
+        { "name": "Apply Coupon", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }], "body": { "mode": "raw", "raw": "{\n  \"code\": \"FIRST20\",\n  \"orderAmount\": 1499,\n  \"categoryIds\": []\n}" }, "url": "{{baseUrl}}/coupons/apply" } },
+        { "name": "Create Order", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }], "body": { "mode": "raw", "raw": "{\n  \"addressId\": \"address-uuid\",\n  \"items\": [{ \"productId\": \"product-uuid\", \"variantId\": \"variant-uuid\", \"quantity\": 1 }],\n  \"couponCode\": \"FIRST20\"\n}" }, "url": "{{baseUrl}}/orders" } },
+        { "name": "Verify Payment", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"orderId\": \"order-uuid\",\n  \"razorpayOrderId\": \"order_xxx\",\n  \"razorpayPaymentId\": \"pay_xxx\",\n  \"razorpaySignature\": \"signature\",\n  \"method\": \"upi\"\n}" }, "url": "{{baseUrl}}/payments/verify" } },
+        { "name": "Create Review", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }], "body": { "mode": "raw", "raw": "{\n  \"productId\": \"product-uuid\",\n  \"orderItemId\": \"order-item-uuid\",\n  \"rating\": 5,\n  \"title\": \"Loved it\",\n  \"comment\": \"Great fit and fabric\",\n  \"photos\": []\n}" }, "url": "{{baseUrl}}/reviews" } },
+        { "name": "Get Banners", "request": { "method": "GET", "url": "{{baseUrl}}/banners" } },
+        { "name": "Admin Dashboard", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/admin/dashboard" } },
+        { "name": "Admin Broadcast", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"title\": \"Mega Sale\",\n  \"body\": \"Up to 40% off today\",\n  \"type\": \"offer\",\n  \"data\": { \"screen\": \"deals\" },\n  \"segment\": {}\n}" }, "url": "{{baseUrl}}/admin/notifications/broadcast" } }
+      ]
+    }
+  ]
+}

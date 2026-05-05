@@ -1,0 +1,84 @@
+# ThreadsApp Backend
+
+Production-ready REST API backend for a lean fashion ecommerce app built with Node.js, Express, PostgreSQL, Sequelize, Redis, Razorpay, Cloudinary, Firebase, Shiprocket, Nodemailer, Twilio, Joi, and Winston.
+
+## Setup
+
+1. Install dependencies:
+```bash
+npm install
+```
+
+2. Create `.env` from `.env.example` and fill in your service credentials.
+
+3. Run migrations and seed data:
+```bash
+npm run migrate
+npm run seed
+```
+
+This seeds two auth accounts for local development:
+
+- Admin UI login: `admin@threadsapp.in` / `Admin123`
+- Customer UI login: `shopper@threadsapp.in` / `Admin123`
+
+4. Start the server:
+```bash
+npm run dev
+```
+
+The API base URL is `http://localhost:5000/api/v1`.
+
+## Scripts
+
+- `npm start` starts the production server
+- `npm run dev` starts the dev server with nodemon
+- `npm run migrate` runs Sequelize migrations
+- `npm run migrate:undo` rolls back all migrations
+- `npm run seed` loads sample catalog, coupons, and banners
+- `npm run lint` runs ESLint
+- `npm test` runs the Node test runner
+
+## Environment
+
+See [.env.example](./.env.example) for the full variable list:
+
+- App: `PORT`, `NODE_ENV`, `FRONTEND_URL`, `PLATFORM_NAME`
+- Database and cache: `DATABASE_URL`, `REDIS_URL`
+- Auth: `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`
+- Media and files: `CLOUDINARY_*`
+- Payments: `RAZORPAY_*`
+- OTP and messaging: `TWILIO_*`, `FIREBASE_*`
+- Shipping: `SHIPROCKET_EMAIL`, `SHIPROCKET_PASSWORD`
+- Email: `EMAIL_USER`, `EMAIL_PASS`
+
+## API Overview
+
+- `GET /api/v1/health`
+- `POST /api/v1/auth/*`
+- `GET|PUT|DELETE /api/v1/users/*`
+- `GET|POST|PUT|DELETE /api/v1/addresses/*`
+- `GET /api/v1/categories/*`
+- `GET /api/v1/brands/*`
+- `GET /api/v1/products/*`
+- `GET|POST|PUT|DELETE /api/v1/cart/*`
+- `GET|POST /api/v1/wishlist/*`
+- `POST|GET /api/v1/orders/*`
+- `POST /api/v1/payments/*`
+- `POST|DELETE /api/v1/coupons/*`
+- `POST|PUT|DELETE /api/v1/reviews/*`
+- `GET /api/v1/search/*`
+- `GET /api/v1/banners`
+- `GET /api/v1/returns/*`
+- `GET|POST|PUT|DELETE /api/v1/admin/*`
+
+## Notes
+
+- Customer signup requires `name`, `phone`, `password`, and optionally `email` plus `gender`.
+- Login accepts either `email` + `password` or `phone` + `otp`.
+- The admin UI does not support signup. It requires an existing user with `role = 'admin'`.
+- OTPs are fixed to `123456` outside production to simplify local testing.
+- Product search uses PostgreSQL full-text search plus `pg_trgm` fallback matching.
+- Product detail, category tree, banners, and trending searches use Redis caching.
+- Inventory locking uses Redis `SET NX EX 600` to reduce overselling risk during checkout.
+- The included Postman collection is at [threadsapp.postman_collection.json](./threadsapp.postman_collection.json).
