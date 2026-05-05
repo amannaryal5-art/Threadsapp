@@ -15,7 +15,7 @@ const nextConfig = {
     ]
   },
   experimental: {
-    typedRoutes: true
+    // typedRoutes: true,  ← disabled to fix Route type error
   }
 };
 
