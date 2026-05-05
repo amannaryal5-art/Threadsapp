@@ -59,7 +59,7 @@ export function PaymentStep({
         <p className="mt-3 text-sm text-secondary/55">Secure payment protected by Razorpay.</p>
         <AppButton
           className="mt-6 w-full"
-          loading={submitting}
+          isLoading={submitting}
           disabled={!items.length}
           onClick={async () => {
             try {
