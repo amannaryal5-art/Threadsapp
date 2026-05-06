@@ -19,9 +19,6 @@ const nextConfig = {
       { protocol: "https", hostname: "images.unsplash.com" },
       { protocol: "https", hostname: "plus.unsplash.com" }
     ]
-  },
-  experimental: {
-    // typedRoutes: true,  ← disabled to fix Route type error
   }
 };
 
