@@ -5,6 +5,8 @@ import { API_URL, APP_URL } from "@/lib/constants";
 import type { ApiResponse } from "@/types/api.types";
 import type { Product, ProductReview } from "@/types/product.types";
 
+export const dynamic = "force-dynamic";
+
 async function getProduct(slug: string) {
   const response = await fetch(`${API_URL}/products/${slug}`, { next: { revalidate: 3600 } });
   if (!response.ok) return null;
@@ -24,13 +26,6 @@ async function getSimilar(slug: string) {
   if (!response.ok) return [];
   const data = (await response.json()) as ApiResponse<{ products: Product[] }>;
   return data.data.products;
-}
-
-export async function generateStaticParams() {
-  const response = await fetch(`${API_URL}/products?limit=100`, { next: { revalidate: 3600 } });
-  if (!response.ok) return [];
-  const data = (await response.json()) as ApiResponse<{ products: Product[] }>;
-  return data.data.products.map((product) => ({ slug: product.slug }));
 }
 
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
