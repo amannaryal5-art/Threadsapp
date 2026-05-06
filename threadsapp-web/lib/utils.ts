@@ -42,12 +42,14 @@ export function truncate(text: string, length: number) {
   return text.length > length ? `${text.slice(0, length - 1)}…` : text;
 }
 
-export function getQueryString(params: Record<string, string | string[] | number | undefined | null>) {
+type QueryParamValue = string | number | boolean | string[] | number[] | undefined | null;
+
+export function getQueryString(params: Record<string, QueryParamValue>) {
   const searchParams = new URLSearchParams();
   Object.entries(params).forEach(([key, value]) => {
     if (value === undefined || value === null || value === "") return;
     if (Array.isArray(value)) {
-      if (value.length) searchParams.set(key, value.join(","));
+      if (value.length) searchParams.set(key, value.map(String).join(","));
       return;
     }
     searchParams.set(key, String(value));

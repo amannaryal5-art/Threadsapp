@@ -20,7 +20,9 @@ export function useInfiniteProducts(endpoint: string, filters: ProductFilters) {
         size: filters.size,
         color: filters.color,
         fabric: filters.fabric,
-        occasion: filters.occasion
+        occasion: filters.occasion,
+        discount: filters.discount,
+        inStock: filters.inStock
       });
       const response = await api.get<ApiResponse<{ products: Product[] }>>(`${endpoint}?${query}`);
       return response.data;
