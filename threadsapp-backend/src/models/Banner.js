@@ -1,19 +1,18 @@
-const { DataTypes } = require('sequelize');
+const mongoose = require('mongoose');
 
-module.exports = (sequelize) =>
-  sequelize.define(
-    'Banner',
-    {
-      id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
-      title: { type: DataTypes.STRING, allowNull: false },
-      image: { type: DataTypes.STRING, allowNull: false },
-      targetType: { type: DataTypes.ENUM('category', 'product', 'url', 'none'), defaultValue: 'none' },
-      targetId: { type: DataTypes.UUID },
-      targetUrl: { type: DataTypes.STRING },
-      isActive: { type: DataTypes.BOOLEAN, defaultValue: true },
-      displayOrder: { type: DataTypes.INTEGER, defaultValue: 0 },
-      startsAt: { type: DataTypes.DATE },
-      endsAt: { type: DataTypes.DATE },
-    },
-    { tableName: 'Banners' },
-  );
+const bannerSchema = new mongoose.Schema(
+  {
+    title: { type: String, required: true },
+    image: { type: String, required: true },
+    targetType: { type: String, enum: ['category', 'product', 'url', 'none'], default: 'none' },
+    targetId: { type: mongoose.Schema.Types.ObjectId, default: null },
+    targetUrl: String,
+    isActive: { type: Boolean, default: true },
+    displayOrder: { type: Number, default: 0 },
+    startsAt: Date,
+    endsAt: Date,
+  },
+  { timestamps: true },
+);
+
+module.exports = mongoose.models.Banner || mongoose.model('Banner', bannerSchema);

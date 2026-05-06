@@ -1,28 +1,25 @@
-const { sequelize, Review, OrderItem, Product } = require('../models');
+const { Review, OrderItem, Product } = require('../models');
 const ApiResponse = require('../utils/ApiResponse');
 const ApiError = require('../utils/ApiError');
 const asyncHandler = require('../utils/asyncHandler');
 
-const refreshProductRatings = async (productId, transaction) => {
-  const reviews = await Review.findAll({ where: { productId, isApproved: true }, transaction });
+const refreshProductRatings = async (productId) => {
+  const reviews = await Review.find({ productId, isApproved: true });
   const totalReviews = reviews.length;
   const averageRating = totalReviews ? reviews.reduce((sum, review) => sum + review.rating, 0) / totalReviews : 0;
-  await Product.update({ totalReviews, averageRating: Number(averageRating.toFixed(2)) }, { where: { id: productId }, transaction });
+  await Product.findByIdAndUpdate(productId, { totalReviews, averageRating: Number(averageRating.toFixed(2)) });
 };
 
 exports.createReview = asyncHandler(async (req, res) => {
-  const transaction = await sequelize.transaction();
   try {
-    const orderItem = await OrderItem.findByPk(req.body.orderItemId, { transaction });
+    const orderItem = await OrderItem.findById(req.body.orderItemId);
     if (!orderItem) throw new ApiError(404, 'Order item not found');
     if (orderItem.productId !== req.body.productId) throw new ApiError(400, 'Product mismatch');
 
-    const review = await Review.create({ ...req.body, userId: req.user.id, isVerifiedPurchase: true }, { transaction });
-    await refreshProductRatings(req.body.productId, transaction);
-    await transaction.commit();
+    const review = await Review.create({ ...req.body, userId: req.user.id, isVerifiedPurchase: true });
+    await refreshProductRatings(req.body.productId);
     return ApiResponse.success(res, 'Review created successfully', { review }, undefined, 201);
   } catch (error) {
-    await transaction.rollback();
     throw error;
   }
 });

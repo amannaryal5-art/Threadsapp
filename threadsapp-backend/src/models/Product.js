@@ -1,49 +1,36 @@
-const { DataTypes } = require('sequelize');
+const mongoose = require('mongoose');
 
-module.exports = (sequelize) =>
-  sequelize.define(
-    'Product',
-    {
-      id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
-      name: { type: DataTypes.STRING, allowNull: false },
-      slug: { type: DataTypes.STRING, allowNull: false, unique: true },
-      description: { type: DataTypes.TEXT },
-      categoryId: { type: DataTypes.UUID, allowNull: false },
-      brandId: { type: DataTypes.UUID, allowNull: false },
-      basePrice: { type: DataTypes.DECIMAL(10, 2), allowNull: false },
-      discountPercent: { type: DataTypes.INTEGER, defaultValue: 0 },
-      sellingPrice: { type: DataTypes.DECIMAL(10, 2), allowNull: false },
-      fabric: { type: DataTypes.STRING },
-      pattern: { type: DataTypes.STRING },
-      occasion: { type: DataTypes.STRING },
-      fit: { type: DataTypes.STRING },
-      care: { type: DataTypes.TEXT },
-      countryOfOrigin: { type: DataTypes.STRING, defaultValue: 'India' },
-      isActive: { type: DataTypes.BOOLEAN, defaultValue: true },
-      isFeatured: { type: DataTypes.BOOLEAN, defaultValue: false },
-      averageRating: { type: DataTypes.FLOAT, defaultValue: 0 },
-      totalReviews: { type: DataTypes.INTEGER, defaultValue: 0 },
-      totalSold: { type: DataTypes.INTEGER, defaultValue: 0 },
-      tags: { type: DataTypes.ARRAY(DataTypes.STRING), defaultValue: [] },
-      searchVector: { type: 'TSVECTOR' },
-    },
-    {
-      tableName: 'Products',
-      indexes: [
-        { fields: ['categoryId'] },
-        { fields: ['brandId'] },
-        { fields: ['isActive'] },
-        { fields: ['sellingPrice'] },
-        { fields: ['averageRating'] },
-        { fields: ['tags'], using: 'gin' },
-        { fields: ['searchVector'], using: 'gin' },
-      ],
-      hooks: {
-        beforeValidate: (product) => {
-          const basePrice = Number(product.basePrice || 0);
-          const discount = Number(product.discountPercent || 0);
-          product.sellingPrice = (basePrice - (basePrice * discount) / 100).toFixed(2);
-        },
-      },
-    },
-  );
+const productSchema = new mongoose.Schema(
+  {
+    name: { type: String, required: true },
+    slug: { type: String, required: true, unique: true, index: true },
+    description: String,
+    categoryId: { type: mongoose.Schema.Types.ObjectId, ref: 'Category', required: true, index: true },
+    brandId: { type: mongoose.Schema.Types.ObjectId, ref: 'Brand', required: true, index: true },
+    basePrice: { type: Number, required: true },
+    discountPercent: { type: Number, default: 0 },
+    sellingPrice: { type: Number, required: true },
+    fabric: String,
+    pattern: String,
+    occasion: String,
+    fit: String,
+    care: String,
+    countryOfOrigin: { type: String, default: 'India' },
+    isActive: { type: Boolean, default: true, index: true },
+    isFeatured: { type: Boolean, default: false },
+    averageRating: { type: Number, default: 0 },
+    totalReviews: { type: Number, default: 0 },
+    totalSold: { type: Number, default: 0 },
+    tags: { type: [String], default: [] },
+  },
+  { timestamps: true },
+);
+
+productSchema.pre('validate', function onValidate(next) {
+  const basePrice = Number(this.basePrice || 0);
+  const discount = Number(this.discountPercent || 0);
+  this.sellingPrice = Number((basePrice - (basePrice * discount) / 100).toFixed(2));
+  next();
+});
+
+module.exports = mongoose.models.Product || mongoose.model('Product', productSchema);

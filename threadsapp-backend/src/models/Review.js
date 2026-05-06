@@ -1,21 +1,20 @@
-const { DataTypes } = require('sequelize');
+const mongoose = require('mongoose');
 
-module.exports = (sequelize) =>
-  sequelize.define(
-    'Review',
-    {
-      id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
-      productId: { type: DataTypes.UUID, allowNull: false },
-      userId: { type: DataTypes.UUID, allowNull: false },
-      orderItemId: { type: DataTypes.UUID, allowNull: false },
-      rating: { type: DataTypes.INTEGER, allowNull: false, validate: { min: 1, max: 5 } },
-      title: { type: DataTypes.STRING },
-      comment: { type: DataTypes.TEXT },
-      photos: { type: DataTypes.ARRAY(DataTypes.STRING), defaultValue: [] },
-      fit: { type: DataTypes.ENUM('runs_small', 'true_to_size', 'runs_large') },
-      isVerifiedPurchase: { type: DataTypes.BOOLEAN, defaultValue: true },
-      helpfulCount: { type: DataTypes.INTEGER, defaultValue: 0 },
-      isApproved: { type: DataTypes.BOOLEAN, defaultValue: true },
-    },
-    { tableName: 'Reviews' },
-  );
+const reviewSchema = new mongoose.Schema(
+  {
+    productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true, index: true },
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    orderItemId: { type: mongoose.Schema.Types.ObjectId, ref: 'OrderItem', required: true },
+    rating: { type: Number, required: true, min: 1, max: 5 },
+    title: String,
+    comment: String,
+    photos: { type: [String], default: [] },
+    fit: { type: String, enum: ['runs_small', 'true_to_size', 'runs_large'] },
+    isVerifiedPurchase: { type: Boolean, default: true },
+    helpfulCount: { type: Number, default: 0 },
+    isApproved: { type: Boolean, default: true },
+  },
+  { timestamps: true },
+);
+
+module.exports = mongoose.models.Review || mongoose.model('Review', reviewSchema);

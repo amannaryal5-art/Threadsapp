@@ -1,15 +1,14 @@
-const { Op } = require('sequelize');
 const { Coupon, CouponUsage } = require('../models');
 const ApiError = require('../utils/ApiError');
 
 exports.validateCoupon = async ({ code, orderAmount, userId, categoryIds = [] }) => {
-  const coupon = await Coupon.findOne({ where: { code: code.toUpperCase(), isActive: true } });
+  const coupon = await Coupon.findOne({ code: code.toUpperCase(), isActive: true });
   if (!coupon) throw new ApiError(404, 'Coupon not found');
   if (coupon.expiresAt && new Date(coupon.expiresAt) < new Date()) throw new ApiError(400, 'Coupon expired');
   if (Number(orderAmount) < Number(coupon.minOrderAmount)) throw new ApiError(400, 'Minimum order amount not met');
   if (coupon.usageLimit && coupon.usageCount >= coupon.usageLimit) throw new ApiError(400, 'Coupon usage limit exceeded');
 
-  const userUsageCount = await CouponUsage.count({ where: { couponId: coupon.id, userId } });
+  const userUsageCount = await CouponUsage.countDocuments({ couponId: coupon.id, userId });
   if (userUsageCount >= coupon.perUserLimit) throw new ApiError(400, 'Coupon per-user limit exceeded');
 
   if (coupon.applicableCategories?.length) {
@@ -31,14 +30,13 @@ exports.validateCoupon = async ({ code, orderAmount, userId, categoryIds = [] })
 };
 
 exports.recordUsage = async ({ couponId, userId, orderId, discountApplied, transaction }) => {
-  await CouponUsage.create({ couponId, userId, orderId, discountApplied }, { transaction });
-  await Coupon.increment('usageCount', { by: 1, where: { id: couponId }, transaction });
+  const createOptions = transaction ? { session: transaction } : {};
+  await CouponUsage.create([{ couponId, userId, orderId, discountApplied }], createOptions);
+  await Coupon.findByIdAndUpdate(couponId, { $inc: { usageCount: 1 } }, createOptions);
 };
 
 exports.listActiveCoupons = async () =>
-  Coupon.findAll({
-    where: {
-      isActive: true,
-      [Op.or]: [{ expiresAt: null }, { expiresAt: { [Op.gte]: new Date() } }],
-    },
+  Coupon.find({
+    isActive: true,
+    $or: [{ expiresAt: null }, { expiresAt: { $gte: new Date() } }],
   });

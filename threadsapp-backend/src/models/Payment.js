@@ -1,21 +1,20 @@
-const { DataTypes } = require('sequelize');
+const mongoose = require('mongoose');
 
-module.exports = (sequelize) =>
-  sequelize.define(
-    'Payment',
-    {
-      id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
-      orderId: { type: DataTypes.UUID, allowNull: false },
-      userId: { type: DataTypes.UUID, allowNull: false },
-      razorpayOrderId: { type: DataTypes.STRING },
-      razorpayPaymentId: { type: DataTypes.STRING },
-      razorpaySignature: { type: DataTypes.STRING },
-      amount: { type: DataTypes.DECIMAL(10, 2), allowNull: false },
-      currency: { type: DataTypes.STRING, defaultValue: 'INR' },
-      status: { type: DataTypes.ENUM('pending', 'paid', 'failed', 'refunded'), defaultValue: 'pending' },
-      method: { type: DataTypes.STRING },
-      refundId: { type: DataTypes.STRING },
-      refundAmount: { type: DataTypes.DECIMAL(10, 2) },
-    },
-    { tableName: 'Payments' },
-  );
+const paymentSchema = new mongoose.Schema(
+  {
+    orderId: { type: mongoose.Schema.Types.ObjectId, ref: 'Order', required: true, index: true },
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    razorpayOrderId: String,
+    razorpayPaymentId: String,
+    razorpaySignature: String,
+    amount: { type: Number, required: true },
+    currency: { type: String, default: 'INR' },
+    status: { type: String, enum: ['pending', 'paid', 'failed', 'refunded'], default: 'pending' },
+    method: String,
+    refundId: String,
+    refundAmount: Number,
+  },
+  { timestamps: true },
+);
+
+module.exports = mongoose.models.Payment || mongoose.model('Payment', paymentSchema);

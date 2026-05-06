@@ -1,4 +1,4 @@
-const { sequelize, Wishlist, Product, ProductImage } = require('../models');
+const { Wishlist, Product, ProductImage } = require('../models');
 const ApiResponse = require('../utils/ApiResponse');
 const asyncHandler = require('../utils/asyncHandler');
 
@@ -8,20 +8,13 @@ exports.getWishlist = asyncHandler(async (req, res) => {
 });
 
 exports.toggleWishlist = asyncHandler(async (req, res) => {
-  const transaction = await sequelize.transaction();
-  try {
-    const existing = await Wishlist.findOne({ where: { userId: req.user.id, productId: req.body.productId }, transaction });
-    let action = 'removed';
-    if (existing) {
-      await existing.destroy({ transaction });
-    } else {
-      await Wishlist.create({ userId: req.user.id, productId: req.body.productId }, { transaction });
-      action = 'added';
-    }
-    await transaction.commit();
-    return ApiResponse.success(res, `Wishlist item ${action} successfully`, { action });
-  } catch (error) {
-    await transaction.rollback();
-    throw error;
+  const existing = await Wishlist.findOne({ userId: req.user.id, productId: req.body.productId });
+  let action = 'removed';
+  if (existing) {
+    await existing.deleteOne();
+  } else {
+    await Wishlist.create({ userId: req.user.id, productId: req.body.productId });
+    action = 'added';
   }
+  return ApiResponse.success(res, `Wishlist item ${action} successfully`, { action });
 });

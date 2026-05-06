@@ -1,33 +1,22 @@
-const { DataTypes } = require('sequelize');
+const mongoose = require('mongoose');
 
-module.exports = (sequelize) =>
-  sequelize.define(
-    'User',
-    {
-      id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
-      name: { type: DataTypes.STRING, allowNull: false },
-      email: { type: DataTypes.STRING, unique: true, validate: { isEmail: true } },
-      phone: { type: DataTypes.STRING, allowNull: false, unique: true },
-      passwordHash: { type: DataTypes.STRING },
-      profilePhoto: { type: DataTypes.STRING },
-      gender: { type: DataTypes.ENUM('male', 'female', 'other', 'prefer_not_to_say'), defaultValue: 'prefer_not_to_say' },
-      dateOfBirth: { type: DataTypes.DATEONLY },
-      isPhoneVerified: { type: DataTypes.BOOLEAN, defaultValue: false },
-      isEmailVerified: { type: DataTypes.BOOLEAN, defaultValue: false },
-      isActive: { type: DataTypes.BOOLEAN, defaultValue: true },
-      role: { type: DataTypes.ENUM('user', 'admin'), defaultValue: 'user' },
-      fcmToken: { type: DataTypes.STRING },
-      loyaltyPoints: { type: DataTypes.INTEGER, defaultValue: 0 },
-    },
-    {
-      tableName: 'Users',
-      defaultScope: {
-        attributes: { exclude: ['passwordHash'] },
-      },
-      scopes: {
-        withPassword: {
-          attributes: { include: ['passwordHash'] },
-        },
-      },
-    },
-  );
+const userSchema = new mongoose.Schema(
+  {
+    name: { type: String, required: true, trim: true },
+    email: { type: String, unique: true, sparse: true, lowercase: true, trim: true },
+    phone: { type: String, required: true, unique: true, trim: true },
+    passwordHash: { type: String, select: false },
+    profilePhoto: { type: String },
+    gender: { type: String, enum: ['male', 'female', 'other', 'prefer_not_to_say'], default: 'prefer_not_to_say' },
+    dateOfBirth: { type: String },
+    isPhoneVerified: { type: Boolean, default: false },
+    isEmailVerified: { type: Boolean, default: false },
+    isActive: { type: Boolean, default: true },
+    role: { type: String, enum: ['user', 'admin'], default: 'user' },
+    fcmToken: { type: String },
+    loyaltyPoints: { type: Number, default: 0 },
+  },
+  { timestamps: true },
+);
+
+module.exports = mongoose.models.User || mongoose.model('User', userSchema);

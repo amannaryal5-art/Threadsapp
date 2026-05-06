@@ -1,15 +1,13 @@
-const { DataTypes } = require('sequelize');
+const mongoose = require('mongoose');
 
-module.exports = (sequelize) =>
-  sequelize.define(
-    'Wishlist',
-    {
-      id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
-      userId: { type: DataTypes.UUID, allowNull: false },
-      productId: { type: DataTypes.UUID, allowNull: false },
-    },
-    {
-      tableName: 'Wishlists',
-      indexes: [{ unique: true, fields: ['userId', 'productId'] }],
-    },
-  );
+const wishlistSchema = new mongoose.Schema(
+  {
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true, index: true },
+  },
+  { timestamps: true },
+);
+
+wishlistSchema.index({ userId: 1, productId: 1 }, { unique: true });
+
+module.exports = mongoose.models.Wishlist || mongoose.model('Wishlist', wishlistSchema);

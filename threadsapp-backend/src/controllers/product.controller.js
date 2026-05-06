@@ -1,4 +1,3 @@
-const { Op } = require('sequelize');
 const runtimeStore = require('../lib/runtime-store');
 const { Product, ProductVariant, ProductImage, Inventory, Category, Brand, Review } = require('../models');
 const ApiResponse = require('../utils/ApiResponse');
@@ -26,14 +25,14 @@ const buildProductWhere = async (query) => {
   }
   if (query.minPrice || query.maxPrice) {
     where.sellingPrice = {};
-    if (query.minPrice) where.sellingPrice[Op.gte] = Number(query.minPrice);
-    if (query.maxPrice) where.sellingPrice[Op.lte] = Number(query.maxPrice);
+    if (query.minPrice) where.sellingPrice.$gte = Number(query.minPrice);
+    if (query.maxPrice) where.sellingPrice.$lte = Number(query.maxPrice);
   }
-  if (query.fabric) where.fabric = { [Op.in]: query.fabric.split(',') };
-  if (query.occasion) where.occasion = { [Op.in]: query.occasion.split(',') };
-  if (query.fit) where.fit = { [Op.in]: query.fit.split(',') };
-  if (query.pattern) where.pattern = { [Op.in]: query.pattern.split(',') };
-  if (query.rating) where.averageRating = { [Op.gte]: Number(query.rating) };
+  if (query.fabric) where.fabric = { $in: query.fabric.split(',') };
+  if (query.occasion) where.occasion = { $in: query.occasion.split(',') };
+  if (query.fit) where.fit = { $in: query.fit.split(',') };
+  if (query.pattern) where.pattern = { $in: query.pattern.split(',') };
+  if (query.rating) where.averageRating = { $gte: Number(query.rating) };
   return where;
 };
 
@@ -46,8 +45,8 @@ exports.getProducts = asyncHandler(async (req, res) => {
   }
 
   const variantWhere = {};
-  if (req.query.size) variantWhere.size = { [Op.in]: req.query.size.split(',') };
-  if (req.query.color) variantWhere.color = { [Op.in]: req.query.color.split(',') };
+  if (req.query.size) variantWhere.size = { $in: req.query.size.split(',') };
+  if (req.query.color) variantWhere.color = { $in: req.query.color.split(',') };
 
   const include = [
     { model: Category },
@@ -58,7 +57,7 @@ exports.getProducts = asyncHandler(async (req, res) => {
       as: 'variants',
       required: Boolean(req.query.size || req.query.color || req.query.inStock === 'true'),
       where: Object.keys(variantWhere).length ? variantWhere : undefined,
-      include: [{ model: Inventory, as: 'inventory', required: req.query.inStock === 'true', where: req.query.inStock === 'true' ? { quantity: { [Op.gt]: 0 } } : undefined }],
+      include: [{ model: Inventory, as: 'inventory', required: req.query.inStock === 'true', where: req.query.inStock === 'true' ? { quantity: { $gt: 0 } } : undefined }],
     },
   ];
 
@@ -113,7 +112,7 @@ exports.getTrendingProducts = asyncHandler(async (_req, res) => {
 
 exports.getDeals = asyncHandler(async (_req, res) => {
   const products = await Product.findAll({
-    where: { isActive: true, discountPercent: { [Op.gte]: 30 } },
+    where: { isActive: true, discountPercent: { $gte: 30 } },
     limit: 20,
     include: productCardIncludes,
   });

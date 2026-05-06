@@ -1,22 +1,21 @@
-const { DataTypes } = require('sequelize');
+const mongoose = require('mongoose');
 
-module.exports = (sequelize) =>
-  sequelize.define(
-    'Coupon',
-    {
-      id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
-      code: { type: DataTypes.STRING, allowNull: false, unique: true },
-      description: { type: DataTypes.STRING },
-      type: { type: DataTypes.ENUM('percent', 'flat'), allowNull: false },
-      value: { type: DataTypes.DECIMAL(10, 2), allowNull: false },
-      minOrderAmount: { type: DataTypes.DECIMAL(10, 2), defaultValue: 0 },
-      maxDiscount: { type: DataTypes.DECIMAL(10, 2) },
-      usageLimit: { type: DataTypes.INTEGER },
-      usageCount: { type: DataTypes.INTEGER, defaultValue: 0 },
-      perUserLimit: { type: DataTypes.INTEGER, defaultValue: 1 },
-      isActive: { type: DataTypes.BOOLEAN, defaultValue: true },
-      expiresAt: { type: DataTypes.DATE },
-      applicableCategories: { type: DataTypes.ARRAY(DataTypes.UUID), defaultValue: null },
-    },
-    { tableName: 'Coupons' },
-  );
+const couponSchema = new mongoose.Schema(
+  {
+    code: { type: String, required: true, unique: true, uppercase: true, trim: true },
+    description: String,
+    type: { type: String, enum: ['percent', 'flat'], required: true },
+    value: { type: Number, required: true },
+    minOrderAmount: { type: Number, default: 0 },
+    maxDiscount: Number,
+    usageLimit: Number,
+    usageCount: { type: Number, default: 0 },
+    perUserLimit: { type: Number, default: 1 },
+    isActive: { type: Boolean, default: true },
+    expiresAt: Date,
+    applicableCategories: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Category' }],
+  },
+  { timestamps: true },
+);
+
+module.exports = mongoose.models.Coupon || mongoose.model('Coupon', couponSchema);

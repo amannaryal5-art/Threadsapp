@@ -1,4 +1,4 @@
-const { Op } = require('sequelize');
+const Op = { in: '$in' };
 const runtimeStore = require('../lib/runtime-store');
 const {
   sequelize,

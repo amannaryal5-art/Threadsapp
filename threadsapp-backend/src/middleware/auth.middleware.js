@@ -28,7 +28,7 @@ exports.authenticate = asyncHandler(async (req, _res, next) => {
     throw error;
   }
 
-  const user = await User.scope('withPassword').findByPk(decoded.id);
+  const user = await User.findById(decoded.id).select('+passwordHash');
 
   if (!user || !user.isActive) {
     throw new ApiError(401, 'User not found or inactive');

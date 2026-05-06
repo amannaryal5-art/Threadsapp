@@ -1,4 +1,3 @@
-const { Op } = require('sequelize');
 const { Order, OrderItem, Payment, Address, Return, User } = require('../models');
 const ApiResponse = require('../utils/ApiResponse');
 const ApiError = require('../utils/ApiError');
@@ -17,8 +16,17 @@ exports.getOrders = asyncHandler(async (req, res) => {
   const { page, limit, offset } = paginate(req.query.page, req.query.limit);
   const where = { userId: req.user.id };
   if (req.query.status) where.status = req.query.status;
-  const { rows, count } = await Order.findAndCountAll({ where, include: [{ model: OrderItem, as: 'items' }, { model: Payment, as: 'payment' }], limit, offset, order: [['createdAt', 'DESC']] });
-  return ApiResponse.success(res, 'Orders fetched successfully', { orders: rows }, { page, limit, total: count, totalPages: Math.ceil(count / limit) });
+  const [orders, count] = await Promise.all([
+    Order.find(where).sort({ createdAt: -1 }).skip(offset).limit(limit).lean(),
+    Order.countDocuments(where),
+  ]);
+  const orderIds = orders.map((o) => o._id);
+  const [items, payments] = await Promise.all([
+    OrderItem.find({ orderId: { $in: orderIds } }).lean(),
+    Payment.find({ orderId: { $in: orderIds } }).lean(),
+  ]);
+  const enriched = orders.map((o) => ({ ...o, items: items.filter((i) => String(i.orderId) === String(o._id)), payment: payments.find((p) => String(p.orderId) === String(o._id)) || null }));
+  return ApiResponse.success(res, 'Orders fetched successfully', { orders: enriched }, { page, limit, total: count, totalPages: Math.ceil(count / limit) });
 });
 
 exports.getOrderDetail = asyncHandler(async (req, res) => {

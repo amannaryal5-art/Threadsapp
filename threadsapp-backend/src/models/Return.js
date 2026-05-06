@@ -1,25 +1,18 @@
-const { DataTypes } = require('sequelize');
+const mongoose = require('mongoose');
 
-module.exports = (sequelize) =>
-  sequelize.define(
-    'Return',
-    {
-      id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
-      orderId: { type: DataTypes.UUID, allowNull: false },
-      orderItemId: { type: DataTypes.UUID, allowNull: false },
-      userId: { type: DataTypes.UUID, allowNull: false },
-      reason: {
-        type: DataTypes.ENUM('wrong_size', 'wrong_item', 'damaged', 'not_as_described', 'changed_mind'),
-        allowNull: false,
-      },
-      description: { type: DataTypes.TEXT },
-      photos: { type: DataTypes.ARRAY(DataTypes.STRING), defaultValue: [] },
-      status: {
-        type: DataTypes.ENUM('requested', 'approved', 'rejected', 'pickup_scheduled', 'picked', 'refund_initiated', 'refunded'),
-        defaultValue: 'requested',
-      },
-      refundAmount: { type: DataTypes.DECIMAL(10, 2) },
-      adminNotes: { type: DataTypes.TEXT },
-    },
-    { tableName: 'Returns' },
-  );
+const returnSchema = new mongoose.Schema(
+  {
+    orderId: { type: mongoose.Schema.Types.ObjectId, ref: 'Order', required: true, index: true },
+    orderItemId: { type: mongoose.Schema.Types.ObjectId, ref: 'OrderItem', required: true },
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    reason: { type: String, enum: ['wrong_size', 'wrong_item', 'damaged', 'not_as_described', 'changed_mind'], required: true },
+    description: String,
+    photos: { type: [String], default: [] },
+    status: { type: String, enum: ['requested', 'approved', 'rejected', 'pickup_scheduled', 'picked', 'refund_initiated', 'refunded'], default: 'requested' },
+    refundAmount: Number,
+    adminNotes: String,
+  },
+  { timestamps: true },
+);
+
+module.exports = mongoose.models.Return || mongoose.model('Return', returnSchema);

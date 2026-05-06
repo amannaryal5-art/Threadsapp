@@ -1,13 +1,12 @@
-const { DataTypes } = require('sequelize');
+const mongoose = require('mongoose');
 
-module.exports = (sequelize) =>
-  sequelize.define(
-    'Inventory',
-    {
-      id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
-      variantId: { type: DataTypes.UUID, allowNull: false, unique: true },
-      quantity: { type: DataTypes.INTEGER, defaultValue: 0 },
-      lowStockThreshold: { type: DataTypes.INTEGER, defaultValue: 5 },
-    },
-    { tableName: 'Inventories' },
-  );
+const inventorySchema = new mongoose.Schema(
+  {
+    variantId: { type: mongoose.Schema.Types.ObjectId, ref: 'ProductVariant', required: true, unique: true, index: true },
+    quantity: { type: Number, default: 0 },
+    lowStockThreshold: { type: Number, default: 5 },
+  },
+  { timestamps: true },
+);
+
+module.exports = mongoose.models.Inventory || mongoose.model('Inventory', inventorySchema);

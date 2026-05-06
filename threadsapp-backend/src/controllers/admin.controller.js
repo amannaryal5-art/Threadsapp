@@ -1,8 +1,6 @@
 const slugify = require('slugify');
-const { Op, fn, col, literal } = require('sequelize');
 const runtimeStore = require('../lib/runtime-store');
 const {
-  sequelize,
   User,
   Category,
   Brand,
@@ -36,19 +34,19 @@ exports.dashboard = asyncHandler(async (_req, res) => {
   const end = new Date();
   end.setHours(23, 59, 59, 999);
   const [orders, revenue, newUsers, lowStockAlerts] = await Promise.all([
-    Order.count({ where: { createdAt: { [Op.between]: [start, end] } } }),
-    Payment.sum('amount', { where: { status: 'paid', createdAt: { [Op.between]: [start, end] } } }),
-    User.count({ where: { createdAt: { [Op.between]: [start, end] } } }),
-    Inventory.findAll({ where: literal(`quantity <= "lowStockThreshold"`), include: [{ model: ProductVariant }] }),
+    Order.countDocuments({ createdAt: { $gte: start, $lte: end } }),
+    Payment.aggregate([{ $match: { status: 'paid', createdAt: { $gte: start, $lte: end } } }, { $group: { _id: null, total: { $sum: '$amount' } } }]),
+    User.countDocuments({ createdAt: { $gte: start, $lte: end } }),
+    Inventory.find({ $expr: { $lte: ['$quantity', '$lowStockThreshold'] } }),
   ]);
-  return ApiResponse.success(res, 'Dashboard fetched successfully', { todayOrders: orders, todayRevenue: Number(revenue || 0), newUsers, lowStockAlerts });
+  return ApiResponse.success(res, 'Dashboard fetched successfully', { todayOrders: orders, todayRevenue: Number(revenue?.[0]?.total || 0), newUsers, lowStockAlerts });
 });
 
 exports.getUsers = asyncHandler(async (req, res) => {
   const { page, limit, offset } = paginate(req.query.page, req.query.limit);
-  const where = req.query.search ? { [Op.or]: [{ name: { [Op.iLike]: `%${req.query.search}%` } }, { email: { [Op.iLike]: `%${req.query.search}%` } }, { phone: { [Op.iLike]: `%${req.query.search}%` } }] } : {};
-  const { rows, count } = await User.findAndCountAll({ where, limit, offset, order: [['createdAt', 'DESC']] });
-  return ApiResponse.success(res, 'Users fetched successfully', { users: rows }, { page, limit, total: count, totalPages: Math.ceil(count / limit) });
+  const where = req.query.search ? { $or: [{ name: { $regex: req.query.search, $options: 'i' } }, { email: { $regex: req.query.search, $options: 'i' } }, { phone: { $regex: req.query.search, $options: 'i' } }] } : {};
+  const [users, count] = await Promise.all([User.find(where).sort({ createdAt: -1 }).skip(offset).limit(limit), User.countDocuments(where)]);
+  return ApiResponse.success(res, 'Users fetched successfully', { users }, { page, limit, total: count, totalPages: Math.ceil(count / limit) });
 });
 
 exports.getUserById = asyncHandler(async (req, res) => {
@@ -71,23 +69,17 @@ exports.getAdminProducts = asyncHandler(async (_req, res) => {
 });
 
 exports.createProduct = asyncHandler(async (req, res) => {
-  const transaction = await sequelize.transaction();
   try {
-    const product = await Product.create(
-      {
-        ...req.body,
-        slug: req.body.slug || slugify(req.body.name, { lower: true, strict: true }),
-      },
-      { transaction },
-    );
+    const product = await Product.create({
+      ...req.body,
+      slug: req.body.slug || slugify(req.body.name, { lower: true, strict: true }),
+    });
     for (const variant of req.body.variants || []) {
-      const createdVariant = await ProductVariant.create({ ...variant, productId: product.id }, { transaction });
-      await Inventory.create({ variantId: createdVariant.id, quantity: variant.quantity, lowStockThreshold: variant.lowStockThreshold }, { transaction });
+      const createdVariant = await ProductVariant.create({ ...variant, productId: product.id });
+      await Inventory.create({ variantId: createdVariant.id, quantity: variant.quantity, lowStockThreshold: variant.lowStockThreshold });
     }
-    await transaction.commit();
     return ApiResponse.success(res, 'Product created successfully', { product }, undefined, 201);
   } catch (error) {
-    await transaction.rollback();
     throw error;
   }
 });
@@ -210,8 +202,8 @@ exports.deleteBrand = asyncHandler(async (req, res) => {
 exports.getAdminOrders = asyncHandler(async (req, res) => {
   const where = {};
   if (req.query.status) where.status = req.query.status;
-  if (req.query.search) where.orderNumber = { [Op.iLike]: `%${req.query.search}%` };
-  if (req.query.startDate && req.query.endDate) where.createdAt = { [Op.between]: [new Date(req.query.startDate), new Date(req.query.endDate)] };
+  if (req.query.search) where.orderNumber = { $regex: req.query.search, $options: 'i' };
+  if (req.query.startDate && req.query.endDate) where.createdAt = { $gte: new Date(req.query.startDate), $lte: new Date(req.query.endDate) };
   const orders = await Order.findAll({ where, include: [{ model: OrderItem, as: 'items' }, { model: Payment, as: 'payment' }, { model: User }] });
   return ApiResponse.success(res, 'Orders fetched successfully', { orders });
 });
@@ -333,12 +325,11 @@ exports.deleteReview = asyncHandler(async (req, res) => {
 });
 
 exports.analyticsRevenue = asyncHandler(async (_req, res) => {
-  const rows = await Payment.findAll({
-    attributes: [[fn('date_trunc', 'day', col('createdAt')), 'period'], [fn('sum', col('amount')), 'revenue']],
-    where: { status: 'paid' },
-    group: [literal('period')],
-    order: [literal('period ASC')],
-  });
+  const rows = await Payment.aggregate([
+    { $match: { status: 'paid' } },
+    { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } }, revenue: { $sum: '$amount' } } },
+    { $sort: { _id: 1 } },
+  ]);
   return ApiResponse.success(res, 'Revenue analytics fetched successfully', { rows });
 });
 exports.analyticsTopProducts = asyncHandler(async (_req, res) => {
@@ -346,23 +337,13 @@ exports.analyticsTopProducts = asyncHandler(async (_req, res) => {
   return ApiResponse.success(res, 'Top products fetched successfully', { rows });
 });
 exports.analyticsTopCategories = asyncHandler(async (_req, res) => {
-  const rows = await Product.findAll({
-    attributes: ['categoryId', [fn('COUNT', col('Product.id')), 'productCount']],
-    include: [{ model: Category, attributes: ['id', 'name'] }],
-    group: ['Product.categoryId', 'Category.id'],
-    order: [[literal('"productCount"'), 'DESC']],
-    limit: 10,
-  });
-
-  const formattedRows = rows.map((row) => ({
-    id: row.Category?.id || row.categoryId,
-    name: row.Category?.name || 'Uncategorized',
-    productCount: Number(row.get('productCount') || 0),
-  }));
+  const rows = await Product.aggregate([{ $group: { _id: '$categoryId', productCount: { $sum: 1 } } }, { $sort: { productCount: -1 } }, { $limit: 10 }]);
+  const categories = await Category.find({ _id: { $in: rows.map((r) => r._id) } }).lean();
+  const formattedRows = rows.map((row) => ({ id: row._id, name: categories.find((c) => String(c._id) === String(row._id))?.name || 'Uncategorized', productCount: Number(row.productCount || 0) }));
 
   return ApiResponse.success(res, 'Top categories fetched successfully', { rows: formattedRows });
 });
 exports.analyticsOrdersByStatus = asyncHandler(async (_req, res) => {
-  const rows = await Order.findAll({ attributes: ['status', [fn('COUNT', col('id')), 'count']], group: ['status'] });
+  const rows = await Order.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }]);
   return ApiResponse.success(res, 'Orders by status fetched successfully', { rows });
 });

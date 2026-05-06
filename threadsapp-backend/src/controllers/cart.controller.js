@@ -1,11 +1,11 @@
-const { sequelize, Cart, CartItem, Product, ProductVariant, ProductImage, Inventory } = require('../models');
+const { Cart, CartItem, Product, ProductVariant, ProductImage, Inventory } = require('../models');
 const ApiResponse = require('../utils/ApiResponse');
 const ApiError = require('../utils/ApiError');
 const asyncHandler = require('../utils/asyncHandler');
 
-const getOrCreateCart = async (userId, transaction) => {
-  let cart = await Cart.findOne({ where: { userId }, transaction });
-  if (!cart) cart = await Cart.create({ userId }, { transaction });
+const getOrCreateCart = async (userId) => {
+  let cart = await Cart.findOne({ userId });
+  if (!cart) cart = await Cart.create({ userId });
   return cart;
 };
 
@@ -24,25 +24,23 @@ exports.getCart = asyncHandler(async (req, res) => {
 });
 
 exports.addToCart = asyncHandler(async (req, res) => {
-  const transaction = await sequelize.transaction();
   try {
-    const cart = await getOrCreateCart(req.user.id, transaction);
-    const variant = await ProductVariant.findOne({ where: { id: req.body.variantId, productId: req.body.productId }, include: [{ model: Inventory, as: 'inventory' }], transaction });
-    if (!variant || !variant.inventory || variant.inventory.quantity < req.body.quantity) throw new ApiError(400, 'Out of stock');
-    const product = await Product.findByPk(req.body.productId, { transaction });
+    const cart = await getOrCreateCart(req.user.id);
+    const variant = await ProductVariant.findOne({ _id: req.body.variantId, productId: req.body.productId });
+    const variantInventory = variant ? await Inventory.findOne({ variantId: variant._id }) : null;
+    if (!variant || !variantInventory || variantInventory.quantity < req.body.quantity) throw new ApiError(400, 'Out of stock');
+    const product = await Product.findById(req.body.productId);
     const priceAtAdd = Number(product.sellingPrice) + Number(variant.additionalPrice);
-    const existing = await CartItem.findOne({ where: { cartId: cart.id, productId: req.body.productId, variantId: req.body.variantId }, transaction });
+    const existing = await CartItem.findOne({ cartId: cart.id, productId: req.body.productId, variantId: req.body.variantId });
     if (existing) {
       existing.quantity += req.body.quantity;
       existing.priceAtAdd = priceAtAdd;
-      await existing.save({ transaction });
+      await existing.save();
     } else {
-      await CartItem.create({ cartId: cart.id, productId: req.body.productId, variantId: req.body.variantId, quantity: req.body.quantity, priceAtAdd }, { transaction });
+      await CartItem.create({ cartId: cart.id, productId: req.body.productId, variantId: req.body.variantId, quantity: req.body.quantity, priceAtAdd });
     }
-    await transaction.commit();
     return ApiResponse.success(res, 'Item added to cart successfully', {});
   } catch (error) {
-    await transaction.rollback();
     throw error;
   }
 });

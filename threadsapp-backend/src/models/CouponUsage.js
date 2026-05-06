@@ -1,14 +1,13 @@
-const { DataTypes } = require('sequelize');
+const mongoose = require('mongoose');
 
-module.exports = (sequelize) =>
-  sequelize.define(
-    'CouponUsage',
-    {
-      id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
-      couponId: { type: DataTypes.UUID, allowNull: false },
-      userId: { type: DataTypes.UUID, allowNull: false },
-      orderId: { type: DataTypes.UUID, allowNull: false },
-      discountApplied: { type: DataTypes.DECIMAL(10, 2), allowNull: false },
-    },
-    { tableName: 'CouponUsages' },
-  );
+const couponUsageSchema = new mongoose.Schema(
+  {
+    couponId: { type: mongoose.Schema.Types.ObjectId, ref: 'Coupon', required: true, index: true },
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    orderId: { type: mongoose.Schema.Types.ObjectId, ref: 'Order', required: true, index: true },
+    discountApplied: { type: Number, required: true },
+  },
+  { timestamps: true },
+);
+
+module.exports = mongoose.models.CouponUsage || mongoose.model('CouponUsage', couponUsageSchema);
