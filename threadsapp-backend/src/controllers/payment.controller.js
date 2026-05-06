@@ -6,7 +6,37 @@ const paymentService = require('../services/payment.service');
 const orderService = require('../services/order.service');
 
 exports.createOrder = asyncHandler(async (req, res) => {
-  const razorpayOrder = await paymentService.createRazorpayOrder(req.body);
+  // Supports two flows:
+  // 1) Pass { orderId } to create a Razorpay order for an existing internal Order.
+  // 2) Pass { amount, currency, receipt, notes } for a generic Razorpay order.
+  const { orderId } = req.body || {};
+
+  let razorpayOrder;
+  if (orderId) {
+    const order = await Order.findByPk(orderId);
+    if (!order) throw new ApiError(404, 'Order not found');
+
+    const payment = await Payment.findOne({ where: { orderId: order.id } });
+    if (!payment) throw new ApiError(404, 'Payment record not found for this order');
+
+    if (order.paymentStatus === 'paid' || payment.status === 'paid') {
+      throw new ApiError(409, 'Order is already paid');
+    }
+
+    razorpayOrder = await paymentService.createRazorpayOrder({
+      amount: order.totalAmount,
+      currency: payment.currency || 'INR',
+      receipt: order.orderNumber || String(order.id),
+      notes: { orderId: order.id, orderNumber: order.orderNumber || '', userId: order.userId },
+    });
+
+    payment.razorpayOrderId = razorpayOrder.id;
+    payment.status = 'pending';
+    await payment.save();
+  } else {
+    razorpayOrder = await paymentService.createRazorpayOrder(req.body);
+  }
+
   return ApiResponse.success(res, 'Razorpay order created successfully', { razorpayOrder });
 });
 
@@ -19,8 +49,15 @@ exports.verifyPayment = asyncHandler(async (req, res) => {
 });
 
 exports.webhook = asyncHandler(async (req, res) => {
-  const event = req.body.event;
-  const payload = req.body.payload || {};
+  const signature = req.headers['x-razorpay-signature'];
+  const rawBody = req.body; // Buffer (because route uses express.raw)
+
+  const ok = paymentService.verifyWebhookSignature({ rawBody, signature });
+  if (!ok) throw new ApiError(400, 'Invalid webhook signature');
+
+  const data = JSON.parse(rawBody.toString('utf8'));
+  const event = data.event;
+  const payload = data.payload || {};
 
   if (event === 'payment.captured') {
     const paymentEntity = payload.payment?.entity;
@@ -29,7 +66,7 @@ exports.webhook = asyncHandler(async (req, res) => {
       await orderService.finalizePaidOrder({
         orderId: payment.orderId,
         razorpayPaymentId: paymentEntity.id,
-        razorpaySignature: paymentEntity.acquirer_data?.rrn || '',
+        razorpaySignature: 'webhook',
         method: paymentEntity.method,
       });
     }
