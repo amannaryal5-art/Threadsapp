@@ -1,6 +1,7 @@
 import { withAuth } from "next-auth/middleware";
 
-export const authMiddleware = withAuth({
+// ✅ must be default export named "middleware"
+export default withAuth({
   pages: {
     signIn: "/login",
   },
@@ -8,3 +9,9 @@ export const authMiddleware = withAuth({
     authorized: ({ token }) => Boolean(token?.accessToken),
   },
 });
+
+export const config = {
+  matcher: [
+    "/((?!login|forgot-password|reset-password|api/auth|_next/static|_next/image|favicon.ico).*)",
+  ],
+};
