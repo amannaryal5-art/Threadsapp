@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build && node -e \"const fs=require('fs'),p=require('path');const d=p.join(process.cwd(),'.next','server','app','(dashboard)');fs.mkdirSync(d,{recursive:true});fs.writeFileSync(p.join(d,'page_client-reference-manifest.js'),'globalThis.__RSC_MANIFEST=(globalThis.__RSC_MANIFEST||{});');\"",
     "start": "next start",
     "lint": "next lint",
     "type-check": "tsc --noEmit"
