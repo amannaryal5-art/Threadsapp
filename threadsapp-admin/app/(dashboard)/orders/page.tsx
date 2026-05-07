@@ -1,6 +1,5 @@
-"use client";
-
 export const dynamic = 'force-dynamic';
+"use client";
 
 import { Download } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";

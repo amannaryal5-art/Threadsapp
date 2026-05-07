@@ -1,6 +1,5 @@
-"use client";
-
 export const dynamic = 'force-dynamic';
+"use client";
 
 import { PageHeader } from "@/components/shared/PageHeader";
 import { ReturnsTable } from "@/components/returns/ReturnsTable";
