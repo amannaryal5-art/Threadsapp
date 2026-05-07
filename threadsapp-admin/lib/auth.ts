@@ -5,11 +5,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import type { ApiResponse } from "@/types/api.types";
 import type { LoginResponse } from "@/types/auth.types";
 
-const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-
-if (!apiUrl) {
-  throw new Error("Missing NEXT_PUBLIC_API_URL environment variable");
-}
+const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "";
 
 function getTokenExpiry(accessToken?: string) {
   if (!accessToken) {
