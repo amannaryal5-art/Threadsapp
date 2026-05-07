@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic';
 "use client";
 
 import Link from "next/link";
+import { Suspense } from "react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Button } from "@/components/ui/button";
 import { ProductFilters } from "@/components/products/ProductFilters";
@@ -11,7 +12,7 @@ import { useBrands } from "@/hooks/useBrands";
 import { useCategories } from "@/hooks/useCategories";
 import { useSearchParams } from "next/navigation";
 
-export default function ProductsPage() {
+function ProductsPageContent() {
   const searchParams = useSearchParams();
   const filters = {
     search: searchParams.get("search") ?? undefined,
@@ -33,5 +34,13 @@ export default function ProductsPage() {
         <ProductsTable data={products} isLoading={isLoading} onToggleFeatured={(id) => toggleFeatured.mutate(id)} />
       </div>
     </div>
+  );
+}
+
+export default function ProductsPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ProductsPageContent />
+    </Suspense>
   );
 }

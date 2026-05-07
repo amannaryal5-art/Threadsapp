@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic';
 "use client";
 
 import { Download } from "lucide-react";
+import { Suspense } from "react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Button } from "@/components/ui/button";
 import { OrdersTable } from "@/components/orders/OrdersTable";
@@ -9,7 +10,7 @@ import { OrderFilters } from "@/components/orders/OrderFilters";
 import { useOrders } from "@/hooks/useOrders";
 import { useSearchParams } from "next/navigation";
 
-export default function OrdersPage() {
+function OrdersPageContent() {
   const searchParams = useSearchParams();
   const filters = {
     search: searchParams.get("search") ?? undefined,
@@ -36,5 +37,13 @@ export default function OrdersPage() {
       <OrderFilters />
       <OrdersTable data={orders} isLoading={isLoading} />
     </div>
+  );
+}
+
+export default function OrdersPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <OrdersPageContent />
+    </Suspense>
   );
 }
