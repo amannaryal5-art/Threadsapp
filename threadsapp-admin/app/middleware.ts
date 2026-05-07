@@ -1,6 +1,5 @@
 import { withAuth } from "next-auth/middleware";
 
-// ✅ must be default export named "middleware"
 export default withAuth({
   pages: {
     signIn: "/login",
