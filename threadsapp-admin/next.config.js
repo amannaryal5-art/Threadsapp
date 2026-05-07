@@ -8,6 +8,16 @@ const nextConfig = {
     eslint: {
       ignoreDuringBuilds: true,
     },
+    experimental: {
+      outputFileTracingExcludes: {
+        "*": [
+          "node_modules/@swc/core-linux-x64-gnu",
+          "node_modules/@swc/core-linux-x64-musl",
+          "node_modules/typescript",
+          "node_modules/prettier",
+        ],
+      },
+    },
   };
   
   module.exports = nextConfig;
