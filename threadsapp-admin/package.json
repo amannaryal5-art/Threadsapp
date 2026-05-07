@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build && node -e \"const fs=require('fs'),p=require('path');const d=p.join(process.cwd(),'.next','server','app','(dashboard)');fs.mkdirSync(d,{recursive:true});fs.writeFileSync(p.join(d,'page_client-reference-manifest.js'),'(function(){if(!globalThis.__RSC_MANIFEST)globalThis.__RSC_MANIFEST={};var h={get:function(t,k){return k in t?t[k]:{ssrModuleMapping:{},edgeSSRModuleMapping:{},clientModules:{},entryCSSFiles:{}}}};globalThis.__RSC_MANIFEST=new Proxy(globalThis.__RSC_MANIFEST,h);})();');\"",
+    "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "type-check": "tsc --noEmit"

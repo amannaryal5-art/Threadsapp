@@ -13,8 +13,7 @@ const nextConfig = {
         "node_modules/@swc/core-linux-x64-gnu",
         "node_modules/@swc/core-linux-x64-musl",
         "node_modules/typescript",
-        "node_modules/prettier",
-        "**/(dashboard)/page_client-reference-manifest.js",
+        "node_modules/prettier"
       ],
     },
   },
