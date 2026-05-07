@@ -1,4 +1,8 @@
-
+experimental: {
+  outputFileTracingExcludes: {
+    '*': ['**/(dashboard)/page_client-reference-manifest.js'],
+  },
+},
 /** @type {import('next').NextConfig} */
 
 const nextConfig = {
