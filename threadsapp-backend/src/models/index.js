@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 
 const models = {
   User: require('./User'),
+  EmailOtp: require('./EmailOtp'),
   Address: require('./Address'),
   Category: require('./Category'),
   Brand: require('./Brand'),

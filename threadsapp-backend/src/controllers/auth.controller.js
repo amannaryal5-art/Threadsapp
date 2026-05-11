@@ -44,8 +44,15 @@ exports.verifyOtp = asyncHandler(async (req, res) => {
 exports.register = asyncHandler(async (req, res) => {
   try {
     const isVerified = await runtimeStore.get(`phone_verified:${req.body.phone}`);
-    const isEmailOtpValid = await otpService.verifyEmailOtp(req.body.email, req.body.emailOtp);
-    if (!isEmailOtpValid) throw new ApiError(400, 'Invalid or expired email OTP');
+    const emailOtpStatus = await otpService.verifyEmailOtp(req.body.email, req.body.emailOtp);
+    if (!emailOtpStatus.valid) {
+      throw new ApiError(
+        400,
+        emailOtpStatus.reason === 'invalid'
+          ? 'That verification code does not match the latest email OTP. Please try again or resend.'
+          : 'Email OTP expired or was cleared. Please resend a new verification code.',
+      );
+    }
     // if (!isVerified) throw new ApiError(400, 'Phone number not verified');
 
     const normalizedEmail = normalizeEmail(req.body.email);

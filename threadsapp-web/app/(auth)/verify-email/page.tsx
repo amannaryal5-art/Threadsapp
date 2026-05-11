@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, BadgeCheck, Clock3, Mail, RefreshCw } from "lucide-react";
+import { ArrowLeft, BadgeCheck, Clock3, Mail, RefreshCw, ShieldCheck, Sparkles } from "lucide-react";
 import toast from "react-hot-toast";
 import { AuthShell } from "@/components/auth/AuthShell";
 import { OtpInput } from "@/components/auth/OtpInput";
@@ -83,65 +83,105 @@ export default function VerifyEmailPage() {
       >
         <div>
           <span className="text-xs font-semibold uppercase tracking-[0.24em] text-primary">Verify your inbox</span>
-          <h2 className="mt-3 text-3xl font-bold text-secondary">Confirm your email address</h2>
-          <p className="mt-2 text-sm leading-6 text-secondary/60">
-            Enter the 6-digit verification code sent to <span className="font-semibold text-secondary">{email || "your email"}</span>.
+          <h2 className="mt-3 text-3xl font-bold leading-tight text-secondary sm:text-[2.15rem]">Confirm your email address</h2>
+          <p className="mt-3 text-sm leading-6 text-secondary/60">
+            Enter the 6-digit verification code sent to{" "}
+            <span className="inline-flex rounded-full bg-secondary/[0.06] px-3 py-1 font-semibold text-secondary">
+              {email || "your email"}
+            </span>
+            .
           </p>
         </div>
 
-        <div className="mt-6 grid gap-3 rounded-[28px] border border-secondary/8 bg-secondary/[0.03] p-4">
-          <div className="flex items-start gap-3">
-            <div className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-primary/12 text-primary">
-              <Mail className="h-5 w-5" />
+        <div className="mt-7 overflow-hidden rounded-[30px] border border-secondary/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,248,250,0.92))] shadow-[0_18px_45px_rgba(15,23,42,0.06)]">
+          <div className="border-b border-secondary/8 px-5 py-4 sm:px-6">
+            <div className="flex items-start gap-3">
+              <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-primary/12 text-primary">
+                <Mail className="h-5 w-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-secondary">Check your inbox</p>
+                <p className="mt-1 text-sm leading-6 text-secondary/60">
+                  We sent a verification code to your email. Keep this tab open while you grab it.
+                </p>
+              </div>
             </div>
+          </div>
+
+          <div className="grid gap-3 px-5 py-4 text-sm text-secondary/72 sm:grid-cols-3 sm:px-6">
+            <div className="rounded-2xl border border-secondary/8 bg-white px-4 py-3 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
+              <div className="flex items-center gap-2 text-secondary/85">
+                <Clock3 className="h-4 w-4 text-primary" />
+                <span className="font-medium">Expires soon</span>
+              </div>
+              <p className="mt-1 text-xs leading-5 text-secondary/55">Use the code within 10 minutes.</p>
+            </div>
+
+            <div className="rounded-2xl border border-secondary/8 bg-white px-4 py-3 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
+              <div className="flex items-center gap-2 text-secondary/85">
+                <BadgeCheck className="h-4 w-4 text-primary" />
+                <span className="font-medium">Activates account</span>
+              </div>
+              <p className="mt-1 text-xs leading-5 text-secondary/55">Your profile goes live after verification.</p>
+            </div>
+
+            <div className="rounded-2xl border border-secondary/8 bg-white px-4 py-3 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
+              <div className="flex items-center gap-2 text-secondary/85">
+                <ShieldCheck className="h-4 w-4 text-primary" />
+                <span className="font-medium">Safe signup</span>
+              </div>
+              <p className="mt-1 text-xs leading-5 text-secondary/55">We verify ownership before creating access.</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-8 rounded-[28px] border border-secondary/8 bg-white p-5 shadow-[0_18px_45px_rgba(15,23,42,0.05)] sm:p-6">
+          <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-sm font-semibold text-secondary">Check your inbox</p>
-              <p className="text-xs leading-5 text-secondary/60">
-                We just sent a code to your email. It expires in about 10 minutes.
-              </p>
+              <p className="text-sm font-semibold text-secondary">Enter your verification code</p>
+              <p className="mt-1 text-xs leading-5 text-secondary/55">Type the 6 digits exactly as they appear in the email.</p>
+            </div>
+            <div className="hidden rounded-full bg-primary/[0.06] px-3 py-1 text-xs font-semibold text-primary sm:inline-flex">
+              6-digit OTP
             </div>
           </div>
-          <div className="grid gap-2 text-xs text-secondary/65 sm:grid-cols-2">
-            <div className="flex items-center gap-2 rounded-2xl bg-white px-3 py-2">
-              <Clock3 className="h-4 w-4 text-primary" />
-              Expires in 10 minutes
-            </div>
-            <div className="flex items-center gap-2 rounded-2xl bg-white px-3 py-2">
-              <BadgeCheck className="h-4 w-4 text-primary" />
-              Account activates after OTP
-            </div>
+
+          <div className="mt-5">
+            <OtpInput value={otp} onChange={setOtp} />
+          </div>
+
+          <div className="mt-4 flex items-start gap-3 rounded-[22px] border border-primary/10 bg-primary/[0.05] px-4 py-3 text-xs leading-6 text-secondary/70">
+            <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+            <p>Did not receive the email? Check spam first, then resend a fresh OTP below.</p>
           </div>
         </div>
 
-        <div className="mt-8">
-          <OtpInput value={otp} onChange={setOtp} />
+        <div className="mt-6 grid gap-3 sm:grid-cols-[1fr_auto]">
+          <AppButton
+            className="w-full py-3.5"
+            isLoading={registerUser.isPending}
+            onClick={handleRegister}
+            disabled={!pendingRegistration || otp.length !== 6}
+          >
+            Verify and create account
+          </AppButton>
+
+          <AppButton
+            className="w-full px-5 py-3.5 sm:w-auto"
+            variant="outline"
+            isLoading={sendEmailOtp.isPending}
+            onClick={handleResend}
+            disabled={!pendingRegistration}
+          >
+            <RefreshCw className="h-4 w-4" />
+            Resend OTP
+          </AppButton>
         </div>
 
-        <div className="mt-4 rounded-[24px] border border-primary/10 bg-primary/[0.05] px-4 py-3 text-xs leading-6 text-secondary/70">
-          Did not receive the email? Check spam first, then resend a fresh OTP below.
-        </div>
-
-        <AppButton
-          className="mt-6 w-full py-3.5"
-          isLoading={registerUser.isPending}
-          onClick={handleRegister}
-          disabled={!pendingRegistration || otp.length !== 6}
+        <Link
+          href="/register"
+          className="mt-5 inline-flex items-center gap-2 text-sm font-medium text-secondary/60 transition hover:text-primary"
         >
-          Verify and create account
-        </AppButton>
-
-        <AppButton
-          className="mt-3 w-full py-3.5"
-          variant="outline"
-          isLoading={sendEmailOtp.isPending}
-          onClick={handleResend}
-          disabled={!pendingRegistration}
-        >
-          <RefreshCw className="h-4 w-4" />
-          Resend OTP
-        </AppButton>
-
-        <Link href="/register" className="mt-5 inline-flex items-center gap-2 text-sm font-medium text-secondary/60 transition hover:text-primary">
           <ArrowLeft className="h-4 w-4" />
           Back to account details
         </Link>
