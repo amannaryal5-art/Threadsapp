@@ -84,6 +84,7 @@ Object.values(models).forEach((Model) => {
 });
 
 const sequelize = {
+  authenticate: async () => true,
   transaction: async () => ({
     LOCK: { UPDATE: 'UPDATE' },
     commit: async () => {},

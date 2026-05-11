@@ -4,6 +4,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
+const mongoose = require('mongoose');
 const rateLimit = require('express-rate-limit');
 const routes = require('./routes');
 const { sequelize } = require('./models');
@@ -43,6 +44,7 @@ app.use('/api/v1/auth/verify-otp', otpLimiter);
 
 app.get('/api/v1/health', async (_req, res) => {
   let database = 'down';
+  let mongo = 'down';
 
   try {
     await sequelize.authenticate();
@@ -51,8 +53,15 @@ app.get('/api/v1/health', async (_req, res) => {
     logger.error(`Health database error: ${error.message}`);
   }
 
+  if (mongoose.connection.readyState === 1) {
+    mongo = 'up';
+  } else if (mongoose.connection.readyState === 2) {
+    mongo = 'connecting';
+  }
+
   return ApiResponse.success(res, 'Health check fetched successfully', {
     database,
+    mongo,
     cache: 'in-memory',
     uptime: process.uptime(),
     platform: process.env.PLATFORM_NAME || 'ThreadsApp',
