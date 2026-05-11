@@ -79,13 +79,9 @@ export default function RegisterPage() {
             sendEmailOtp.mutate(
               { email: values.email, name: values.name },
               {
-                onSuccess: (data) => {
+                onSuccess: () => {
                   window.sessionStorage.setItem(pendingRegistrationKey, JSON.stringify(values));
-                  toast.success(
-                    data.previewOtp
-                      ? `Email not configured locally. Use OTP ${data.previewOtp}`
-                      : `OTP sent to ${values.email}`
-                  );
+                  toast.success(`OTP sent to ${values.email}`);
                   router.push(`/verify-email?email=${encodeURIComponent(values.email)}`);
                 }
               }

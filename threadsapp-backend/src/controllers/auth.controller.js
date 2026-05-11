@@ -7,7 +7,7 @@ const ApiError = require('../utils/ApiError');
 const asyncHandler = require('../utils/asyncHandler');
 const generateTokens = require('../utils/generateTokens');
 const otpService = require('../services/otp.service');
-const emailService = require('../services/email.service');
+const emailService = require('../services/emailService');
 
 const normalizeEmail = (email) => email?.trim().toLowerCase();
 
@@ -28,21 +28,10 @@ exports.sendEmailOtp = asyncHandler(async (req, res) => {
   const existing = await User.findOne({ email: normalizedEmail });
   if (existing) throw new ApiError(409, 'User already exists');
 
-  const result = await otpService.sendEmailOtp(normalizedEmail, req.body.name);
-  const previewOtp =
-    process.env.NODE_ENV !== 'production' && (!result.delivered || !emailService.isEmailConfigured())
-      ? result.otp
-      : undefined;
-
-  return ApiResponse.success(
-    res,
-    result.delivered ? 'Email OTP sent successfully' : 'Email OTP generated locally because email delivery failed',
-    {
+  await otpService.sendEmailOtp(normalizedEmail, req.body.name);
+  return ApiResponse.success(res, 'Verification code sent to your email', {
     email: normalizedEmail,
-      ...(previewOtp ? { previewOtp } : {}),
-      ...(!result.delivered && result.warning ? { warning: result.warning, fallback: result.fallback } : {}),
-    },
-  );
+  });
 });
 
 exports.verifyOtp = asyncHandler(async (req, res) => {

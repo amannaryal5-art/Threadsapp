@@ -64,12 +64,8 @@ export default function VerifyEmailPage() {
     sendEmailOtp.mutate(
       { email: pendingRegistration.email, name: pendingRegistration.name },
       {
-        onSuccess: (data) => {
-          toast.success(
-            data.previewOtp
-              ? `Email not configured locally. Use OTP ${data.previewOtp}`
-              : `OTP resent to ${pendingRegistration.email}`
-          );
+        onSuccess: () => {
+          toast.success(`OTP resent to ${pendingRegistration.email}`);
         }
       }
     );

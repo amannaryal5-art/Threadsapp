@@ -18,7 +18,6 @@ interface TokensPayload {
 
 interface EmailOtpPayload {
   email: string;
-  previewOtp?: string;
 }
 
 function getApiErrorMessage(error: unknown) {

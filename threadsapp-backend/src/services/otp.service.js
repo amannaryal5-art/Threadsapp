@@ -1,6 +1,6 @@
 const twilio = require('twilio');
 const runtimeStore = require('../lib/runtime-store');
-const emailService = require('./email.service');
+const { sendOTPEmail } = require('./emailService');
 
 const client =
   process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN
@@ -38,22 +38,8 @@ exports.sendEmailOtp = async (email, name) => {
   const otp = generateOtp();
   const normalizedEmail = email.trim().toLowerCase();
   await runtimeStore.set(`email_otp:${normalizedEmail}`, otp, 'EX', 10 * 60);
-
-  try {
-    await emailService.sendSignupOtp({ email: normalizedEmail, name, otp });
-    return { otp, delivered: true };
-  } catch (error) {
-    if (process.env.NODE_ENV !== 'production') {
-      return {
-        otp,
-        delivered: false,
-        fallback: emailService.isCertificateError(error) ? 'certificate' : 'transport',
-        warning: error.message,
-      };
-    }
-
-    throw error;
-  }
+  await sendOTPEmail(normalizedEmail, otp, name);
+  return { delivered: true };
 };
 
 exports.verifyEmailOtp = async (email, otp) => {
