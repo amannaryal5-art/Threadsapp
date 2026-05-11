@@ -23,6 +23,10 @@ const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
+  if (!API_URL && typeof window !== "undefined" && window.location.hostname !== "localhost") {
+    throw new Error("NEXT_PUBLIC_API_URL is not configured for this deployment.");
+  }
+
   const token = useAuthStore.getState().accessToken;
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;

@@ -14,12 +14,20 @@ const ApiResponse = require('./utils/ApiResponse');
 const errorMiddleware = require('./middleware/error.middleware');
 
 const app = express();
+const configuredOrigins = [
+  process.env.FRONTEND_URL,
+  process.env.ADMIN_URL,
+  ...(process.env.CORS_ORIGINS || '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean),
+];
+
 const allowedOrigins = new Set(
   [
     'http://localhost:3000',
     'http://localhost:3001',
-    process.env.FRONTEND_URL,
-    process.env.ADMIN_URL,
+    ...configuredOrigins,
   ].filter(Boolean),
 );
 
@@ -42,6 +50,10 @@ app.use(
   cors({
     origin(origin, callback) {
       if (!origin || allowedOrigins.has(origin)) {
+        return callback(null, true);
+      }
+
+      if (process.env.ALLOW_VERCEL_PREVIEWS === 'true' && /\.vercel\.app$/i.test(origin)) {
         return callback(null, true);
       }
 
