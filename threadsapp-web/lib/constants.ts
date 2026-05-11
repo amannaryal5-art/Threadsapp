@@ -1,6 +1,9 @@
 export const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME ?? "ThreadsApp";
 export const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3001";
-export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000/api/v1";
+const rawApiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000";
+export const API_URL = rawApiUrl.endsWith("/api/v1")
+  ? rawApiUrl
+  : `${rawApiUrl.replace(/\/$/, "")}/api/v1`;
 export const RAZORPAY_KEY = process.env.NEXT_PUBLIC_RAZORPAY_KEY ?? "";
 export const GOOGLE_MAPS_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY ?? "";
 

@@ -1,6 +1,8 @@
 const requiredVars = [
+  'MONGODB_URI',
   'JWT_ACCESS_SECRET',
   'JWT_REFRESH_SECRET',
+  'NEXTAUTH_SECRET',
   'FRONTEND_URL',
 ];
 

@@ -28,11 +28,21 @@ exports.sendEmailOtp = asyncHandler(async (req, res) => {
   const existing = await User.findOne({ email: normalizedEmail });
   if (existing) throw new ApiError(409, 'User already exists');
 
-  const otp = await otpService.sendEmailOtp(normalizedEmail, req.body.name);
-  return ApiResponse.success(res, 'Email OTP sent successfully', {
+  const result = await otpService.sendEmailOtp(normalizedEmail, req.body.name);
+  const previewOtp =
+    process.env.NODE_ENV !== 'production' && (!result.delivered || !emailService.isEmailConfigured())
+      ? result.otp
+      : undefined;
+
+  return ApiResponse.success(
+    res,
+    result.delivered ? 'Email OTP sent successfully' : 'Email OTP generated locally because email delivery failed',
+    {
     email: normalizedEmail,
-    ...(process.env.NODE_ENV !== 'production' && !emailService.isEmailConfigured() ? { previewOtp: otp } : {}),
-  });
+      ...(previewOtp ? { previewOtp } : {}),
+      ...(!result.delivered && result.warning ? { warning: result.warning, fallback: result.fallback } : {}),
+    },
+  );
 });
 
 exports.verifyOtp = asyncHandler(async (req, res) => {
@@ -43,27 +53,35 @@ exports.verifyOtp = asyncHandler(async (req, res) => {
 });
 
 exports.register = asyncHandler(async (req, res) => {
-  const isVerified = await runtimeStore.get(`phone_verified:${req.body.phone}`);
-  const isEmailOtpValid = await otpService.verifyEmailOtp(req.body.email, req.body.emailOtp);
-  if (!isEmailOtpValid) throw new ApiError(400, 'Invalid or expired email OTP');
-  // if (!isVerified) throw new ApiError(400, 'Phone number not verified');
+  try {
+    const isVerified = await runtimeStore.get(`phone_verified:${req.body.phone}`);
+    const isEmailOtpValid = await otpService.verifyEmailOtp(req.body.email, req.body.emailOtp);
+    if (!isEmailOtpValid) throw new ApiError(400, 'Invalid or expired email OTP');
+    // if (!isVerified) throw new ApiError(400, 'Phone number not verified');
 
-  const normalizedEmail = normalizeEmail(req.body.email);
-  const existing = await User.findOne({ $or: [{ phone: req.body.phone }, { email: normalizedEmail }] });
-  if (existing) throw new ApiError(409, 'User already exists');
+    const normalizedEmail = normalizeEmail(req.body.email);
+    const existing = await User.findOne({ $or: [{ phone: req.body.phone }, { email: normalizedEmail }] });
+    if (existing) throw new ApiError(409, 'User already exists');
 
-  const user = await User.create({
-    phone: req.body.phone,
-    name: req.body.name,
-    email: normalizedEmail,
-    passwordHash: await bcrypt.hash(req.body.password, 10),
-    gender: req.body.gender,
-    isPhoneVerified: Boolean(isVerified),
-    isEmailVerified: true,
-  });
+    const user = await User.create({
+      phone: req.body.phone,
+      name: req.body.name,
+      email: normalizedEmail,
+      passwordHash: await bcrypt.hash(req.body.password, 10),
+      gender: req.body.gender,
+      isPhoneVerified: Boolean(isVerified),
+      isEmailVerified: true,
+    });
 
-  const tokens = await generateTokens(user);
-  return ApiResponse.success(res, 'Registration completed successfully', { user: serializeUser(user), tokens }, undefined, 201);
+    const tokens = await generateTokens(user);
+    return ApiResponse.success(res, 'Registration completed successfully', { user: serializeUser(user), tokens }, undefined, 201);
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+
+    throw new ApiError(error.statusCode || 500, error.message || 'Registration failed', error.errors || []);
+  }
 });
 
 exports.login = asyncHandler(async (req, res) => {
@@ -84,6 +102,34 @@ exports.login = asyncHandler(async (req, res) => {
   if (!user || !user.isActive) throw new ApiError(401, 'User not found or inactive');
   const tokens = await generateTokens(user);
   return ApiResponse.success(res, 'Login successful', { user: serializeUser(user), tokens });
+});
+
+exports.adminLogin = asyncHandler(async (req, res) => {
+  try {
+    const normalizedEmail = normalizeEmail(req.body.email);
+    const user = await User.findOne({ email: normalizedEmail }).select('+passwordHash');
+
+    if (!user || !user.passwordHash || !(await bcrypt.compare(req.body.password, user.passwordHash))) {
+      throw new ApiError(401, 'Invalid email or password');
+    }
+
+    if (!user.isActive) {
+      throw new ApiError(401, 'User not found or inactive');
+    }
+
+    if (user.role !== 'admin') {
+      throw new ApiError(403, 'Admin access only');
+    }
+
+    const tokens = await generateTokens(user);
+    return ApiResponse.success(res, 'Admin login successful', { user: serializeUser(user), tokens });
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+
+    throw new ApiError(error.statusCode || 500, error.message || 'Admin login failed', error.errors || []);
+  }
 });
 
 exports.refreshToken = asyncHandler(async (req, res) => {

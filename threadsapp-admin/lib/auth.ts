@@ -1,11 +1,13 @@
 import axios from "axios";
-import type { NextAuthOptions } from "next-auth";
+import type { NextAuthConfig } from "next-auth";
 import type { JWT } from "next-auth/jwt";
 import CredentialsProvider from "next-auth/providers/credentials";
 import type { ApiResponse } from "@/types/api.types";
 import type { LoginResponse } from "@/types/auth.types";
 
-const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "";
+const backendUrl = (process.env.BACKEND_URL ?? "").replace(/\/$/, "");
+const configuredApiUrl = (process.env.NEXT_PUBLIC_API_URL ?? (backendUrl ? `${backendUrl}/api/v1` : "")).replace(/\/$/, "");
+const apiUrl = configuredApiUrl.endsWith("/api/v1") ? configuredApiUrl : `${configuredApiUrl}/api/v1`;
 
 function getTokenExpiry(accessToken?: string) {
   if (!accessToken) {
@@ -38,7 +40,8 @@ async function refreshAccessToken(token: JWT) {
       accessTokenExpires: getTokenExpiry(response.data.data.accessToken),
       error: undefined,
     };
-  } catch {
+  } catch (error) {
+    console.error("NextAuth refreshAccessToken failed", error);
     return {
       ...token,
       error: "RefreshAccessTokenError",
@@ -46,12 +49,13 @@ async function refreshAccessToken(token: JWT) {
   }
 }
 
-export const authOptions: NextAuthOptions = {
+export const authOptions = {
   session: {
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60,
   },
   secret: process.env.NEXTAUTH_SECRET,
+  debug: true,
   providers: [
     CredentialsProvider({
       name: "Credentials",
@@ -60,35 +64,47 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        const email = credentials?.email?.trim();
-        const password = credentials?.password;
+        try {
+          const email = typeof credentials?.email === "string" ? credentials.email.trim() : "";
+          const password = typeof credentials?.password === "string" ? credentials.password : "";
 
-        if (!email || !password) {
-          throw new Error("Email and password are required");
+          if (!email || !password) {
+            return null;
+          }
+
+          if (!apiUrl) {
+            console.error("NextAuth authorize error:", new Error("API URL is not configured"));
+            return null;
+          }
+
+          const response = await axios.post<ApiResponse<LoginResponse>>(
+            `${apiUrl}/auth/admin/login`,
+            {
+              email,
+              password,
+            },
+            {
+              timeout: 10000,
+            },
+          );
+
+          const payload = response.data.data;
+
+          return {
+            id: payload.user.id,
+            name: payload.user.name,
+            email: payload.user.email,
+            role: payload.user.role,
+            phone: payload.user.phone,
+            profilePhoto: payload.user.profilePhoto ?? null,
+            accessToken: payload.tokens.accessToken,
+            refreshToken: payload.tokens.refreshToken,
+            accessTokenExpires: getTokenExpiry(payload.tokens.accessToken),
+          };
+        } catch (error) {
+          console.error("NextAuth authorize error:", error);
+          return null;
         }
-
-        const response = await axios.post<ApiResponse<LoginResponse>>(`${apiUrl}/auth/login`, {
-          email,
-          password,
-        });
-
-        const payload = response.data.data;
-
-        if (payload.user.role !== "admin") {
-          throw new Error("Admin access only. Sign in with an admin account.");
-        }
-
-        return {
-          id: payload.user.id,
-          name: payload.user.name,
-          email: payload.user.email,
-          role: payload.user.role,
-          phone: payload.user.phone,
-          profilePhoto: payload.user.profilePhoto ?? null,
-          accessToken: payload.tokens.accessToken,
-          refreshToken: payload.tokens.refreshToken,
-          accessTokenExpires: getTokenExpiry(payload.tokens.accessToken),
-        };
       },
     }),
   ],
@@ -100,9 +116,9 @@ export const authOptions: NextAuthOptions = {
         token.accessTokenExpires = user.accessTokenExpires;
         token.error = undefined;
         token.user = {
-          id: user.id,
+          id: user.id ?? "",
           name: user.name,
-          email: user.email,
+          email: user.email ?? null,
           role: user.role,
           phone: user.phone,
           profilePhoto: user.profilePhoto ?? null,
@@ -120,12 +136,18 @@ export const authOptions: NextAuthOptions = {
       return token;
     },
     async session({ session, token }) {
+      const tokenUser = token.user;
       session.accessToken = token.accessToken;
       session.refreshToken = token.refreshToken;
       session.error = token.error;
       session.user = {
         ...session.user,
-        ...token.user,
+        id: tokenUser?.id ?? session.user?.id ?? "",
+        name: tokenUser?.name ?? session.user?.name ?? null,
+        email: tokenUser?.email ?? session.user?.email ?? null,
+        role: tokenUser?.role ?? session.user?.role ?? "admin",
+        phone: tokenUser?.phone ?? session.user?.phone ?? "",
+        profilePhoto: tokenUser?.profilePhoto ?? null,
       };
 
       return session;
@@ -134,4 +156,4 @@ export const authOptions: NextAuthOptions = {
   pages: {
     signIn: "/login",
   },
-};
+} satisfies NextAuthConfig;

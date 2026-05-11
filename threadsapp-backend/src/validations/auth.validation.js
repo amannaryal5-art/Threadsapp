@@ -30,6 +30,11 @@ exports.loginSchema = Joi.object({
   password: Joi.string().min(6),
 }).or('phone', 'email');
 
+exports.adminLoginSchema = Joi.object({
+  email: Joi.string().email().required(),
+  password: Joi.string().min(6).required(),
+});
+
 exports.refreshTokenSchema = Joi.object({
   refreshToken: Joi.string().required(),
 });

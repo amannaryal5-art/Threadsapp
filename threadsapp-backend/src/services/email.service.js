@@ -3,10 +3,18 @@ const nodemailer = require('nodemailer');
 const transporter =
   process.env.EMAIL_USER && process.env.EMAIL_PASS
     ? nodemailer.createTransport({
-        service: 'gmail',
+        host: 'smtp.gmail.com',
+        port: 465,
+        secure: true,
         auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
+        tls: {
+          rejectUnauthorized: process.env.EMAIL_ALLOW_INSECURE_TLS === 'true' ? false : true,
+        },
       })
     : nodemailer.createTransport({ jsonTransport: true });
+
+exports.isCertificateError = (error) =>
+  /unable to verify the first certificate|self[- ]signed certificate|unable to get local issuer certificate/i.test(error?.message || '');
 
 exports.sendMail = async ({ to, subject, html, attachments = [] }) =>
   transporter.sendMail({

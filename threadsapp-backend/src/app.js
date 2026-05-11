@@ -8,11 +8,20 @@ const mongoose = require('mongoose');
 const rateLimit = require('express-rate-limit');
 const routes = require('./routes');
 const { sequelize } = require('./models');
+const { isRedisReady } = require('./config/redis');
 const logger = require('./utils/logger');
 const ApiResponse = require('./utils/ApiResponse');
 const errorMiddleware = require('./middleware/error.middleware');
 
 const app = express();
+const allowedOrigins = new Set(
+  [
+    'http://localhost:3000',
+    'http://localhost:3001',
+    process.env.FRONTEND_URL,
+    process.env.ADMIN_URL,
+  ].filter(Boolean),
+);
 
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -31,7 +40,13 @@ const otpLimiter = rateLimit({
 app.use(helmet());
 app.use(
   cors({
-    origin: true,
+    origin(origin, callback) {
+      if (!origin || allowedOrigins.has(origin)) {
+        return callback(null, true);
+      }
+
+      return callback(new Error(`CORS blocked for origin: ${origin}`));
+    },
     credentials: true,
   }),
 );
@@ -62,7 +77,7 @@ app.get('/api/v1/health', async (_req, res) => {
   return ApiResponse.success(res, 'Health check fetched successfully', {
     database,
     mongo,
-    cache: 'in-memory',
+    cache: isRedisReady() ? 'redis' : 'in-memory',
     uptime: process.uptime(),
     platform: process.env.PLATFORM_NAME || 'ThreadsApp',
   });

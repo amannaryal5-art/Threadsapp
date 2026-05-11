@@ -1,0 +1,12 @@
+npm install
+
+# Test 1: Check DNS
+nslookup cluster0.genujkd.mongodb.net 8.8.8.8
+
+# Test 2: Change DNS to Google (fixes most ISP blocks)
+Set-DnsClientServerAddress -InterfaceAlias "Wi-Fi" -ServerAddresses 8.8.8.8, 8.8.4.4
+
+# Test 3: Install local MongoDB as fallback
+winget install MongoDB.Server
+
+npm run start:dev
