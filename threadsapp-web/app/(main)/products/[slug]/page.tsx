@@ -1,28 +1,28 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ProductDetailView } from "@/components/products/ProductDetailView";
-import { API_URL, APP_URL } from "@/lib/constants";
+import { APP_URL, SERVER_API_URL } from "@/lib/constants";
 import type { ApiResponse } from "@/types/api.types";
 import type { Product, ProductReview } from "@/types/product.types";
 
 export const dynamic = "force-dynamic";
 
 async function getProduct(slug: string) {
-  const response = await fetch(`${API_URL}/products/${slug}`, { next: { revalidate: 3600 } });
+  const response = await fetch(`${SERVER_API_URL}/products/${slug}`, { next: { revalidate: 3600 } });
   if (!response.ok) return null;
   const data = (await response.json()) as ApiResponse<{ product: Product }>;
   return data.data.product;
 }
 
 async function getReviews(slug: string) {
-  const response = await fetch(`${API_URL}/products/${slug}/reviews`, { next: { revalidate: 3600 } });
+  const response = await fetch(`${SERVER_API_URL}/products/${slug}/reviews`, { next: { revalidate: 3600 } });
   if (!response.ok) return [];
   const data = (await response.json()) as ApiResponse<{ reviews: ProductReview[] }>;
   return data.data.reviews;
 }
 
 async function getSimilar(slug: string) {
-  const response = await fetch(`${API_URL}/products/${slug}/similar`, { next: { revalidate: 3600 } });
+  const response = await fetch(`${SERVER_API_URL}/products/${slug}/similar`, { next: { revalidate: 3600 } });
   if (!response.ok) return [];
   const data = (await response.json()) as ApiResponse<{ products: Product[] }>;
   return data.data.products;

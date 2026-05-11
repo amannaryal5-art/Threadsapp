@@ -33,16 +33,17 @@ npm run dev
 ## Environment Variables
 
 - `NEXT_PUBLIC_API_URL`
+- `BACKEND_URL`
 - `NEXT_PUBLIC_RAZORPAY_KEY`
 - `NEXT_PUBLIC_GOOGLE_MAPS_KEY`
 - `NEXT_PUBLIC_GA_ID`
 - `NEXT_PUBLIC_APP_NAME`
 - `NEXT_PUBLIC_APP_URL`
 
-For Vercel deployments, `NEXT_PUBLIC_API_URL` must point to your deployed backend API origin, for example:
+For Vercel deployments, set `BACKEND_URL` to your deployed backend API origin. The browser can then call the same-origin `/api/backend/*` proxy without needing a public backend URL:
 
 ```env
-NEXT_PUBLIC_API_URL=https://your-backend.onrender.com/api/v1
+BACKEND_URL=https://your-backend.onrender.com/api/v1
 NEXT_PUBLIC_APP_URL=https://your-frontend.vercel.app
 ```
 

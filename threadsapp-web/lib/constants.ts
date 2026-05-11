@@ -1,13 +1,18 @@
 export const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME ?? "ThreadsApp";
 export const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3001";
-const rawApiUrl =
-  process.env.NEXT_PUBLIC_API_URL ??
-  (process.env.NODE_ENV === "production" ? "" : "http://localhost:5000");
-export const API_URL = rawApiUrl.endsWith("/api/v1")
-  ? rawApiUrl
-  : rawApiUrl
-    ? `${rawApiUrl.replace(/\/$/, "")}/api/v1`
-    : "";
+const normalizeApiUrl = (value?: string) => {
+  const normalized = (value ?? "").trim().replace(/\/$/, "");
+  if (!normalized) return "";
+  return normalized.endsWith("/api/v1") ? normalized : `${normalized}/api/v1`;
+};
+
+const publicApiUrl = normalizeApiUrl(process.env.NEXT_PUBLIC_API_URL);
+const serverBackendUrl = normalizeApiUrl(process.env.BACKEND_URL);
+
+export const BROWSER_API_URL =
+  publicApiUrl || (process.env.NODE_ENV === "production" ? "/api/backend" : "http://localhost:5000/api/v1");
+export const SERVER_API_URL = serverBackendUrl || publicApiUrl;
+export const API_URL = typeof window === "undefined" ? SERVER_API_URL || BROWSER_API_URL : BROWSER_API_URL;
 export const RAZORPAY_KEY = process.env.NEXT_PUBLIC_RAZORPAY_KEY ?? "";
 export const GOOGLE_MAPS_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY ?? "";
 

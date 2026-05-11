@@ -2,7 +2,7 @@
 
 import axios, { AxiosError, type InternalAxiosRequestConfig } from "axios";
 import toast from "react-hot-toast";
-import { API_URL } from "@/lib/constants";
+import { BROWSER_API_URL } from "@/lib/constants";
 import { useAuthStore } from "@/store/authStore";
 import type { ApiResponse } from "@/types/api.types";
 import type { User } from "@/types/user.types";
@@ -18,15 +18,11 @@ interface RefreshPayload {
 }
 
 const api = axios.create({
-  baseURL: API_URL,
+  baseURL: BROWSER_API_URL,
   withCredentials: true
 });
 
 api.interceptors.request.use((config) => {
-  if (!API_URL && typeof window !== "undefined" && window.location.hostname !== "localhost") {
-    throw new Error("NEXT_PUBLIC_API_URL is not configured for this deployment.");
-  }
-
   const token = useAuthStore.getState().accessToken;
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
