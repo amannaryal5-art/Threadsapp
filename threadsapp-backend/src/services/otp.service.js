@@ -57,8 +57,14 @@ exports.sendEmailOtp = async (email, name) => {
     },
   );
 
-  await sendOTPEmail(normalizedEmail, otp, name);
-  return { delivered: true };
+  try {
+    await sendOTPEmail(normalizedEmail, otp, name);
+    return { delivered: true };
+  } catch (error) {
+    await runtimeStore.del(`email_otp:${normalizedEmail}`);
+    await EmailOtp.deleteOne({ email: normalizedEmail });
+    throw error;
+  }
 };
 
 exports.verifyEmailOtp = async (email, otp) => {

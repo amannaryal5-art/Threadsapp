@@ -8,6 +8,7 @@ const asyncHandler = require('../utils/asyncHandler');
 const generateTokens = require('../utils/generateTokens');
 const otpService = require('../services/otp.service');
 const emailService = require('../services/emailService');
+const { EmailDeliveryError } = require('../services/emailService');
 
 const normalizeEmail = (email) => email?.trim().toLowerCase();
 
@@ -28,7 +29,21 @@ exports.sendEmailOtp = asyncHandler(async (req, res) => {
   const existing = await User.findOne({ email: normalizedEmail });
   if (existing) throw new ApiError(409, 'User already exists');
 
-  await otpService.sendEmailOtp(normalizedEmail, req.body.name);
+  try {
+    await otpService.sendEmailOtp(normalizedEmail, req.body.name);
+  } catch (error) {
+    if (error instanceof EmailDeliveryError) {
+      throw new ApiError(
+        503,
+        error.retryable
+          ? 'We could not send the verification email right now. Please try again in a minute.'
+          : 'Email delivery is not configured correctly. Please contact support.',
+      );
+    }
+
+    throw error;
+  }
+
   return ApiResponse.success(res, 'Verification code sent to your email', {
     email: normalizedEmail,
   });
