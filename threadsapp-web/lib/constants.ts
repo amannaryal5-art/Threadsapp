@@ -10,7 +10,9 @@ const publicApiUrl = normalizeApiUrl(process.env.NEXT_PUBLIC_API_URL);
 const serverBackendUrl = normalizeApiUrl(process.env.BACKEND_URL);
 
 export const BROWSER_API_URL =
-  publicApiUrl || (process.env.NODE_ENV === "production" ? "/api/backend" : "http://localhost:5000/api/v1");
+  process.env.NODE_ENV === "production"
+    ? "/api/backend"
+    : publicApiUrl || "http://localhost:5000/api/v1";
 export const SERVER_API_URL = serverBackendUrl || publicApiUrl;
 export const API_URL = typeof window === "undefined" ? SERVER_API_URL || BROWSER_API_URL : BROWSER_API_URL;
 export const RAZORPAY_KEY = process.env.NEXT_PUBLIC_RAZORPAY_KEY ?? "";
