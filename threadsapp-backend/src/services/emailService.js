@@ -47,6 +47,32 @@ function resolveProvider() {
   return 'none';
 }
 
+function getEmailProviderStatus() {
+  const provider = resolveProvider();
+
+  if (provider === 'resend') {
+    return {
+      provider,
+      configured: Boolean(RESEND_API_KEY && EMAIL_FROM),
+      details: RESEND_API_KEY ? 'Resend API configured' : 'RESEND_API_KEY is missing',
+    };
+  }
+
+  if (provider === 'smtp') {
+    return {
+      provider,
+      configured: Boolean(smtpTransporter),
+      details: smtpTransporter ? 'SMTP credentials configured' : 'SMTP credentials are missing',
+    };
+  }
+
+  return {
+    provider: 'none',
+    configured: false,
+    details: 'No email provider is configured',
+  };
+}
+
 async function verifyTransport() {
   const provider = resolveProvider();
 
@@ -207,6 +233,7 @@ const sendPasswordReset = async (user, resetLink) =>
 
 module.exports = {
   EmailDeliveryError,
+  getEmailProviderStatus,
   sendMail,
   sendOTPEmail,
   sendSignupOtp,

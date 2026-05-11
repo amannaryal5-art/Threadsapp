@@ -9,6 +9,7 @@ const rateLimit = require('express-rate-limit');
 const routes = require('./routes');
 const { sequelize } = require('./models');
 const { isRedisReady } = require('./config/redis');
+const { getEmailProviderStatus } = require('./services/emailService');
 const logger = require('./utils/logger');
 const ApiResponse = require('./utils/ApiResponse');
 const errorMiddleware = require('./middleware/error.middleware');
@@ -86,10 +87,13 @@ app.get('/api/v1/health', async (_req, res) => {
     mongo = 'connecting';
   }
 
+  const email = getEmailProviderStatus();
+
   return ApiResponse.success(res, 'Health check fetched successfully', {
     database,
     mongo,
     cache: isRedisReady() ? 'redis' : 'in-memory',
+    email,
     uptime: process.uptime(),
     platform: process.env.PLATFORM_NAME || 'ThreadsApp',
   });
