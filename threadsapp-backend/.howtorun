@@ -10,3 +10,7 @@ Set-DnsClientServerAddress -InterfaceAlias "Wi-Fi" -ServerAddresses 8.8.8.8, 8.8
 winget install MongoDB.Server
 
 npm run start:dev
+
+for admin  run
+id admin@threadsapp.in
+pass Admin123
