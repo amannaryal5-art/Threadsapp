@@ -2,27 +2,28 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ProductDetailView } from "@/components/products/ProductDetailView";
 import { APP_URL, SERVER_API_URL } from "@/lib/constants";
+import { getProductThumbnail } from "@/lib/product-media";
 import type { ApiResponse } from "@/types/api.types";
 import type { Product, ProductReview } from "@/types/product.types";
 
 export const dynamic = "force-dynamic";
 
 async function getProduct(slug: string) {
-  const response = await fetch(`${SERVER_API_URL}/products/${slug}`, { next: { revalidate: 3600 } });
+  const response = await fetch(`${SERVER_API_URL}/products/${slug}`, { cache: "no-store" });
   if (!response.ok) return null;
   const data = (await response.json()) as ApiResponse<{ product: Product }>;
   return data.data.product;
 }
 
 async function getReviews(slug: string) {
-  const response = await fetch(`${SERVER_API_URL}/products/${slug}/reviews`, { next: { revalidate: 3600 } });
+  const response = await fetch(`${SERVER_API_URL}/products/${slug}/reviews`, { cache: "no-store" });
   if (!response.ok) return [];
   const data = (await response.json()) as ApiResponse<{ reviews: ProductReview[] }>;
   return data.data.reviews;
 }
 
 async function getSimilar(slug: string) {
-  const response = await fetch(`${SERVER_API_URL}/products/${slug}/similar`, { next: { revalidate: 3600 } });
+  const response = await fetch(`${SERVER_API_URL}/products/${slug}/similar`, { cache: "no-store" });
   if (!response.ok) return [];
   const data = (await response.json()) as ApiResponse<{ products: Product[] }>;
   return data.data.products;
@@ -39,7 +40,7 @@ export async function generateMetadata({ params }: { params: { slug: string } })
     openGraph: {
       title: product.name,
       description: (product.description ?? product.name).slice(0, 160),
-      images: [product.images?.[0]?.url ?? `${APP_URL}/og-image.png`]
+      images: [getProductThumbnail(product) ?? `${APP_URL}/og-image.png`]
     }
   };
 }
@@ -52,7 +53,7 @@ export default async function ProductPage({ params }: { params: { slug: string }
     "@context": "https://schema.org",
     "@type": "Product",
     name: product.name,
-    image: product.images?.map((image) => image.url),
+    image: product.images?.map((image) => image.url) ?? [getProductThumbnail(product)],
     description: product.description,
     brand: { "@type": "Brand", name: product.Brand?.name },
     offers: {

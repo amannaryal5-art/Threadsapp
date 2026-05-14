@@ -9,6 +9,16 @@ import type { ApiResponse } from "@/types/api.types";
 import type { LoginPayload } from "@/types/auth.types";
 import { parseApiError } from "@/lib/utils";
 
+function normalizeLoginError(message: string) {
+  switch (message) {
+    case "CredentialsSignin":
+    case "CallbackRouteError":
+      return "Invalid admin email or password.";
+    default:
+      return message;
+  }
+}
+
 export function useLogin() {
   const router = useRouter();
 
@@ -24,7 +34,7 @@ export function useLogin() {
       }
 
       if (result.error) {
-        throw new Error(result.error);
+        throw new Error(normalizeLoginError(result.error));
       }
 
       return result;

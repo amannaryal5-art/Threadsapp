@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Heart, Minus, Plus, Sparkles, Copy, CheckCircle2 } from "lucide-react";
 import toast from "react-hot-toast";
@@ -19,10 +19,12 @@ import { SizeSelector } from "@/components/products/SizeSelector";
 import { StarRating } from "@/components/shared/StarRating";
 import { AppButton } from "@/components/shared/AppButton";
 import { WriteReview } from "@/components/products/WriteReview";
+import { getVariantMrp, getVariantSellingPrice } from "@/lib/pricing";
 import { useCartStore } from "@/store/cartStore";
 import { useUiStore } from "@/store/uiStore";
 import { useWishlistStore } from "@/store/wishlistStore";
 import { useRecentlyViewed } from "@/hooks/useRecentlyViewed";
+import { debugProductMedia } from "@/lib/product-media";
 import type { Product, ProductReview } from "@/types/product.types";
 
 export function ProductDetailView({
@@ -41,6 +43,13 @@ export function ProductDetailView({
   const openCartDrawer = useUiStore((state) => state.openCartDrawer);
   const toggleWishlist = useWishlistStore((state) => state.toggleWishlist);
   const recent = useRecentlyViewed(product);
+  const selectedVariantInStock = Boolean((selectedVariant?.inventory?.quantity ?? 0) > 0);
+  const selectedVariantMrp = getVariantMrp(product, selectedVariant);
+  const selectedVariantSellingPrice = getVariantSellingPrice(product, selectedVariant);
+
+  useEffect(() => {
+    debugProductMedia(`ProductDetailView:${product.slug}`, product);
+  }, [product]);
 
   const groupedByColor = useMemo(
     () => variants.filter((variant, index, array) => array.findIndex((item) => item.color === variant.color) === index),
@@ -63,8 +72,8 @@ export function ProductDetailView({
             </a>
           </div>
           <div>
-            <PriceBadge price={product.sellingPrice} mrp={product.basePrice} discount={product.discountPercent} />
-            <p className="mt-2 text-sm text-secondary/50">Inclusive of all taxes</p>
+            <PriceBadge price={selectedVariantSellingPrice} mrp={selectedVariantMrp} discount={product.discountPercent} />
+            <p className="mt-2 text-sm text-secondary/50">GST and delivery are calculated at checkout based on the final cart total.</p>
           </div>
           <details className="rounded-[28px] border border-secondary/10 p-5" open>
             <summary className="cursor-pointer font-semibold text-secondary">Offers</summary>
@@ -103,16 +112,21 @@ export function ProductDetailView({
               Wishlist
             </AppButton>
             <AppButton
+              disabled={!selectedVariantInStock}
               onClick={async () => {
                 if (!selectedVariant) {
                   toast.error("Select a size before adding to cart.");
+                  return;
+                }
+                if ((selectedVariant.inventory?.quantity ?? 0) < quantity) {
+                  toast.error("This size is out of stock.");
                   return;
                 }
                 await addItem({ product, variant: selectedVariant, quantity });
                 openCartDrawer();
               }}
             >
-              Add to Cart
+              {selectedVariantInStock ? "Add to Cart" : "Out of Stock"}
             </AppButton>
           </div>
           <div className="grid gap-3 rounded-[28px] bg-white p-5 shadow-soft">

@@ -1,6 +1,11 @@
 # ThreadsApp Backend
 
-Production-ready REST API backend for a lean fashion ecommerce app built with Node.js, Express, PostgreSQL, Sequelize, Redis, Razorpay, Cloudinary, Firebase, Shiprocket, Nodemailer, Twilio, Joi, and Winston.
+ThreadsApp backend for a fashion ecommerce app built with Node.js, Express, Razorpay, Cloudinary, Firebase, Shiprocket, Nodemailer, Twilio, Joi, and Winston.
+
+Important: this repo is mid-migration:
+
+- App startup, health checks, and migrations now read PostgreSQL config.
+- Much of the route/controller/model layer still uses Mongoose-shaped models, so this codebase is not yet a full native Sequelize/Postgres port.
 
 ## Setup
 
@@ -11,10 +16,20 @@ npm install
 
 2. Create `.env` from `.env.example` and fill in your service credentials.
 
-3. Run migrations and seed data:
+3. If you want the Postgres schema locally, run migrations and seed data:
 ```bash
 npm run migrate
 npm run seed
+```
+
+Use local Postgres settings such as:
+
+```env
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=postgres
+DB_PASSWORD=postgres
+DB_NAME=threads
 ```
 
 This seeds two auth accounts for local development:
@@ -33,6 +48,7 @@ The API base URL is `http://localhost:5000/api/v1`.
 
 - `npm start` starts the production server
 - `npm run dev` starts the dev server with nodemon
+- `npm run start:local` starts the backend with your local `.env`
 - `npm run migrate` runs Sequelize migrations
 - `npm run migrate:undo` rolls back all migrations
 - `npm run seed` loads sample catalog, coupons, and banners
@@ -44,7 +60,7 @@ The API base URL is `http://localhost:5000/api/v1`.
 See [.env.example](./.env.example) for the full variable list:
 
 - App: `PORT`, `NODE_ENV`, `FRONTEND_URL`, `PLATFORM_NAME`
-- Database and cache: `DATABASE_URL`, `REDIS_URL`
+- Database: `DATABASE_URL` or `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`
 - Auth: `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`
 - Media and files: `CLOUDINARY_*`
 - Payments: `RAZORPAY_*`
@@ -77,8 +93,7 @@ See [.env.example](./.env.example) for the full variable list:
 - Customer signup requires `name`, `phone`, `password`, and optionally `email` plus `gender`.
 - Login accepts either `email` + `password` or `phone` + `otp`.
 - The admin UI does not support signup. It requires an existing user with `role = 'admin'`.
-- OTPs are fixed to `123456` outside production to simplify local testing.
-- Product search uses PostgreSQL full-text search plus `pg_trgm` fallback matching.
-- Product detail, category tree, banners, and trending searches use Redis caching.
-- Inventory locking uses Redis `SET NX EX 600` to reduce overselling risk during checkout.
+- In local development, OTP delivery can fall back to backend-terminal logging if SMTP is unavailable.
+- Postgres full-text search objects are present in the migration files, but several services still use Mongo-style query operators and model helpers today.
+- Product detail, category tree, banners, trending searches, OTP storage, and inventory locks use the built-in in-memory runtime store.
 - The included Postman collection is at [threadsapp.postman_collection.json](./threadsapp.postman_collection.json).

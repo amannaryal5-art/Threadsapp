@@ -2,8 +2,7 @@ const jwt = require('jsonwebtoken');
 const { User } = require('../models');
 const ApiError = require('../utils/ApiError');
 const asyncHandler = require('../utils/asyncHandler');
-
-const accessTokenSecret = process.env.NEXTAUTH_SECRET || process.env.JWT_ACCESS_SECRET;
+const { accessTokenSecret } = require('../config/auth');
 
 exports.authenticate = asyncHandler(async (req, _res, next) => {
   const authHeader = req.headers.authorization;
@@ -28,7 +27,7 @@ exports.authenticate = asyncHandler(async (req, _res, next) => {
     throw error;
   }
 
-  const user = await User.findById(decoded.id).select('+passwordHash');
+  const user = await User.scope('withPassword').findByPk(decoded.id);
 
   if (!user || !user.isActive) {
     throw new ApiError(401, 'User not found or inactive');

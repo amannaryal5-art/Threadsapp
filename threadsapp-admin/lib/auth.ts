@@ -9,6 +9,21 @@ const backendUrl = (process.env.BACKEND_URL ?? "").replace(/\/$/, "");
 const configuredApiUrl = (process.env.NEXT_PUBLIC_API_URL ?? (backendUrl ? `${backendUrl}/api/v1` : "")).replace(/\/$/, "");
 const apiUrl = configuredApiUrl.endsWith("/api/v1") ? configuredApiUrl : `${configuredApiUrl}/api/v1`;
 
+function getApiErrorMessage(error: unknown) {
+  if (axios.isAxiosError(error)) {
+    const message = error.response?.data?.message;
+    if (typeof message === "string" && message.trim()) {
+      return message;
+    }
+  }
+
+  if (error instanceof Error && error.message.trim()) {
+    return error.message;
+  }
+
+  return "Unable to sign in right now.";
+}
+
 function getTokenExpiry(accessToken?: string) {
   if (!accessToken) {
     return 0;
@@ -103,7 +118,7 @@ export const authOptions = {
           };
         } catch (error) {
           console.error("NextAuth authorize error:", error);
-          return null;
+          throw new Error(getApiErrorMessage(error));
         }
       },
     }),

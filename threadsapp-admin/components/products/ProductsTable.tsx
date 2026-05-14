@@ -8,6 +8,7 @@ import { ImagePreview } from "@/components/shared/ImagePreview";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
+import { getProductThumbnail } from "@/lib/product-media";
 import { formatCurrency } from "@/lib/utils";
 import type { Product } from "@/types/product.types";
 
@@ -25,7 +26,7 @@ export function ProductsTable({
   const columns = [
     columnHelper.accessor("images", {
       header: "Thumbnail",
-      cell: ({ row }) => <ImagePreview src={row.original.images?.[0]?.url} alt={row.original.name} />,
+      cell: ({ row }) => <ImagePreview src={getProductThumbnail(row.original)} alt={row.original.name} />,
     }),
     columnHelper.display({
       id: "name",
@@ -41,12 +42,27 @@ export function ProductsTable({
     columnHelper.display({
       id: "pricing",
       header: "Pricing",
-      cell: ({ row }) => (
-        <div className="text-sm">
-          <p>{formatCurrency(row.original.basePrice)} / {formatCurrency(row.original.sellingPrice)}</p>
-          <p className="text-slate-500">{row.original.discountPercent}% off</p>
-        </div>
-      ),
+      cell: ({ row }) => {
+        const variantAdditions = row.original.variants?.map((variant) => Number(variant.additionalPrice ?? 0)) ?? [0];
+        const minAddition = Math.min(...variantAdditions);
+        const maxAddition = Math.max(...variantAdditions);
+        const baseMrp = Number(row.original.basePrice);
+        const discountPercent = Number(row.original.discountPercent ?? 0);
+        const minMrp = baseMrp + minAddition;
+        const maxMrp = baseMrp + maxAddition;
+        const minSelling = minMrp - (minMrp * discountPercent) / 100;
+        const maxSelling = maxMrp - (maxMrp * discountPercent) / 100;
+
+        return (
+          <div className="text-sm">
+            <p>
+              {formatCurrency(minSelling)}{minSelling !== maxSelling ? ` - ${formatCurrency(maxSelling)}` : ""} /{" "}
+              {formatCurrency(minMrp)}{minMrp !== maxMrp ? ` - ${formatCurrency(maxMrp)}` : ""}
+            </p>
+            <p className="text-slate-500">{row.original.discountPercent}% off</p>
+          </div>
+        );
+      },
     }),
     columnHelper.display({
       id: "variants",

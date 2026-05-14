@@ -1,9 +1,8 @@
 require('dotenv').config();
 
 const bcrypt = require('bcryptjs');
-const mongoose = require('mongoose');
 const { connectDB } = require('../src/config/database');
-const { User } = require('../src/models');
+const { User, sequelize } = require('../src/models');
 
 async function seedAdmin() {
   const email = (process.env.ADMIN_EMAIL || 'admin@threadsapp.in').trim().toLowerCase();
@@ -14,26 +13,31 @@ async function seedAdmin() {
   await connectDB();
 
   const passwordHash = await bcrypt.hash(password, 10);
+  const existing = await User.scope('withPassword').findOne({ where: { email } });
 
-  const admin = await User.findOneAndUpdate(
-    { email },
-    {
-      $set: {
-        name,
-        phone,
-        passwordHash,
-        role: 'admin',
-        isActive: true,
-        isEmailVerified: true,
-        isPhoneVerified: true,
-      },
-    },
-    {
-      upsert: true,
-      new: true,
-      setDefaultsOnInsert: true,
-    },
-  );
+  let admin;
+  if (existing) {
+    existing.name = name;
+    existing.phone = phone;
+    existing.passwordHash = passwordHash;
+    existing.role = 'admin';
+    existing.isActive = true;
+    existing.isEmailVerified = true;
+    existing.isPhoneVerified = true;
+    await existing.save();
+    admin = existing;
+  } else {
+    admin = await User.create({
+      name,
+      email,
+      phone,
+      passwordHash,
+      role: 'admin',
+      isActive: true,
+      isEmailVerified: true,
+      isPhoneVerified: true,
+    });
+  }
 
   console.log(`Admin user ready: ${admin.email}`);
   console.log(`Password: ${password}`);
@@ -45,5 +49,5 @@ seedAdmin()
     process.exitCode = 1;
   })
   .finally(async () => {
-    await mongoose.connection.close();
+    await sequelize.close();
   });

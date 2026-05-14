@@ -20,6 +20,7 @@ exports.productSchema = Joi.object({
   variants: Joi.array()
     .items(
       Joi.object({
+        id: Joi.string().uuid().optional(),
         size: Joi.string().required(),
         color: Joi.string().required(),
         colorHex: Joi.string().allow('', null),
@@ -33,6 +34,7 @@ exports.productSchema = Joi.object({
 });
 
 exports.variantSchema = Joi.object({
+  id: Joi.string().uuid().optional(),
   size: Joi.string().required(),
   color: Joi.string().required(),
   colorHex: Joi.string().allow('', null),

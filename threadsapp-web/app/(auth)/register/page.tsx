@@ -79,9 +79,13 @@ export default function RegisterPage() {
             sendEmailOtp.mutate(
               { email: values.email, name: values.name },
               {
-                onSuccess: () => {
+                onSuccess: (data) => {
                   window.sessionStorage.setItem(pendingRegistrationKey, JSON.stringify(values));
-                  toast.success(`OTP sent to ${values.email}`);
+                  if (data.emailDelivered === false) {
+                    toast.success("OTP created. Check backend terminal because local email delivery is unavailable.");
+                  } else {
+                    toast.success(`OTP sent to ${values.email}`);
+                  }
                   router.push(`/verify-email?email=${encodeURIComponent(values.email)}`);
                 }
               }

@@ -1,16 +1,1 @@
-import { withAuth } from "next-auth/middleware";
-
-export default withAuth({
-  pages: {
-    signIn: "/login",
-  },
-  callbacks: {
-    authorized: ({ token }) => Boolean(token?.accessToken),
-  },
-});
-
-export const config = {
-  matcher: [
-    "/((?!login|forgot-password|reset-password|api/auth|_next/static|_next/image|favicon.ico).*)",
-  ],
-};
+export { middleware, config } from "../middleware";

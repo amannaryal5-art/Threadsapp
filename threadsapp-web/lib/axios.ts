@@ -9,6 +9,7 @@ import type { User } from "@/types/user.types";
 
 interface RetryConfig extends InternalAxiosRequestConfig {
   _retry?: boolean;
+  _retryCount?: number;
 }
 
 interface RefreshPayload {
@@ -34,6 +35,17 @@ api.interceptors.response.use(
   (response) => response,
   async (error: AxiosError<ApiResponse<unknown>>) => {
     const originalRequest = error.config as RetryConfig | undefined;
+    
+    // Handle rate limiting with exponential backoff
+    if (error.response?.status === 429 && originalRequest) {
+      const retryCount = originalRequest._retryCount || 0;
+      if (retryCount < 3) {
+        originalRequest._retryCount = retryCount + 1;
+        const delay = Math.pow(2, retryCount) * 1000; // 1s, 2s, 4s
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return api(originalRequest);
+      }
+    }
 
     if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
       originalRequest._retry = true;

@@ -1,22 +1,91 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const { sequelize } = require('../config/database');
 
-const userSchema = new mongoose.Schema(
+const User = sequelize.define(
+  'User',
   {
-    name: { type: String, required: true, trim: true },
-    email: { type: String, unique: true, sparse: true, lowercase: true, trim: true },
-    phone: { type: String, required: true, unique: true, trim: true },
-    passwordHash: { type: String, select: false },
-    profilePhoto: { type: String },
-    gender: { type: String, enum: ['male', 'female', 'other', 'prefer_not_to_say'], default: 'prefer_not_to_say' },
-    dateOfBirth: { type: String },
-    isPhoneVerified: { type: Boolean, default: false },
-    isEmailVerified: { type: Boolean, default: false },
-    isActive: { type: Boolean, default: true },
-    role: { type: String, enum: ['user', 'admin'], default: 'user' },
-    fcmToken: { type: String },
-    loyaltyPoints: { type: Number, default: 0 },
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
+      allowNull: false,
+    },
+    name: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    email: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      unique: true,
+      set(value) {
+        this.setDataValue('email', value ? String(value).trim().toLowerCase() : null);
+      },
+    },
+    phone: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      unique: true,
+    },
+    passwordHash: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    profilePhoto: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    gender: {
+      type: DataTypes.ENUM('male', 'female', 'other', 'prefer_not_to_say'),
+      allowNull: false,
+      defaultValue: 'prefer_not_to_say',
+    },
+    dateOfBirth: {
+      type: DataTypes.DATEONLY,
+      allowNull: true,
+    },
+    isPhoneVerified: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
+    isEmailVerified: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
+    isActive: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: true,
+    },
+    role: {
+      type: DataTypes.ENUM('user', 'admin'),
+      allowNull: false,
+      defaultValue: 'user',
+    },
+    fcmToken: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    loyaltyPoints: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
+    },
   },
-  { timestamps: true },
+  {
+    tableName: 'Users',
+    timestamps: true,
+    defaultScope: {
+      attributes: { exclude: ['passwordHash'] },
+    },
+    scopes: {
+      withPassword: {
+        attributes: { include: ['passwordHash'] },
+      },
+    },
+  },
 );
 
-module.exports = mongoose.models.User || mongoose.model('User', userSchema);
+module.exports = User;

@@ -1,5 +1,6 @@
-import Image from "next/image";
 import { Minus, Plus } from "lucide-react";
+import { ProductImage } from "@/components/shared/ProductImage";
+import { getProductThumbnail } from "@/lib/product-media";
 import type { CartItem as CartItemType } from "@/types/cart.types";
 import { formatCurrency } from "@/lib/utils";
 
@@ -18,12 +19,7 @@ export function CartItem({
   return (
     <div className="flex gap-4 rounded-[28px] bg-white p-4 shadow-soft">
       <div className="relative h-20 w-20 overflow-hidden rounded-2xl bg-background">
-        <Image
-          src={item.Product?.images?.[0]?.url ?? "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=600&q=80"}
-          alt={item.Product?.name ?? "Cart item"}
-          fill
-          className="object-cover"
-        />
+        <ProductImage src={getProductThumbnail(item.Product)} alt={item.Product?.name ?? "Cart item"} className="object-cover" sizes="80px" />
       </div>
       <div className="flex-1">
         <p className="text-xs font-semibold uppercase tracking-[0.15em] text-secondary/40">{item.Product?.Brand?.name}</p>

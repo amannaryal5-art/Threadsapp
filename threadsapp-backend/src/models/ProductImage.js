@@ -1,15 +1,43 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const { sequelize } = require('../config/database');
 
-const productImageSchema = new mongoose.Schema(
+const ProductImage = sequelize.define(
+  'ProductImage',
   {
-    productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true, index: true },
-    variantId: { type: mongoose.Schema.Types.ObjectId, ref: 'ProductVariant', default: null },
-    url: { type: String, required: true },
-    altText: String,
-    isPrimary: { type: Boolean, default: false },
-    displayOrder: { type: Number, default: 0 },
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
+      allowNull: false,
+    },
+    productId: {
+      type: DataTypes.UUID,
+      allowNull: false,
+    },
+    variantId: {
+      type: DataTypes.UUID,
+      allowNull: true,
+    },
+    url: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    altText: DataTypes.STRING,
+    isPrimary: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
+    displayOrder: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
+    },
   },
-  { timestamps: true },
+  {
+    tableName: 'ProductImages',
+    timestamps: true,
+  },
 );
 
-module.exports = mongoose.models.ProductImage || mongoose.model('ProductImage', productImageSchema);
+module.exports = ProductImage;

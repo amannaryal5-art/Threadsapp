@@ -8,15 +8,19 @@ const normalizeApiUrl = (value?: string) => {
 
 const publicApiUrl = normalizeApiUrl(process.env.NEXT_PUBLIC_API_URL);
 const serverBackendUrl = normalizeApiUrl(process.env.BACKEND_URL);
+const localApiUrl = "http://localhost:5000/api/v1";
 
 export const BROWSER_API_URL =
   process.env.NODE_ENV === "production"
     ? "/api/backend"
-    : publicApiUrl || "http://localhost:5000/api/v1";
-export const SERVER_API_URL = serverBackendUrl || publicApiUrl;
+    : publicApiUrl || localApiUrl;
+export const SERVER_API_URL = serverBackendUrl || publicApiUrl || localApiUrl;
 export const API_URL = typeof window === "undefined" ? SERVER_API_URL || BROWSER_API_URL : BROWSER_API_URL;
 export const RAZORPAY_KEY = process.env.NEXT_PUBLIC_RAZORPAY_KEY ?? "";
-export const GOOGLE_MAPS_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY ?? "";
+export const GOOGLE_MAPS_KEY =
+  process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ??
+  process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY ??
+  "";
 
 export const QUERY_STALE_TIME = 1000 * 60 * 5;
 export const AUTH_COOKIE = "threadsapp_session";

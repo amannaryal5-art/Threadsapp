@@ -77,3 +77,18 @@ export function useRequestReturn() {
     }
   });
 }
+
+export function useSyncPayment() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (orderId: string) => {
+      const response = await api.post<ApiResponse<{ order: Order; paymentStatus: string }>>(`/payments/${orderId}/sync`);
+      return response.data.data;
+    },
+    onSuccess: (data, orderId) => {
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      queryClient.invalidateQueries({ queryKey: ["order", orderId] });
+      return data;
+    }
+  });
+}

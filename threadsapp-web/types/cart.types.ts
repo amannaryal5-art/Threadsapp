@@ -14,10 +14,13 @@ export interface CartItem {
 export interface CartState {
   cartId?: string;
   items: CartItem[];
+  mrpTotal: number;
   subtotal: number;
+  productDiscount: number;
   itemCount: number;
   couponCode?: string;
   couponDiscount: number;
   shippingCharge: number;
   taxAmount: number;
+  totalAmount: number;
 }

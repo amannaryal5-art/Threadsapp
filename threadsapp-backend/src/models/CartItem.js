@@ -1,14 +1,41 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const { sequelize } = require('../config/database');
 
-const cartItemSchema = new mongoose.Schema(
+const CartItem = sequelize.define(
+  'CartItem',
   {
-    cartId: { type: mongoose.Schema.Types.ObjectId, ref: 'Cart', required: true, index: true },
-    productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
-    variantId: { type: mongoose.Schema.Types.ObjectId, ref: 'ProductVariant', required: true },
-    quantity: { type: Number, default: 1 },
-    priceAtAdd: { type: Number, required: true },
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
+      allowNull: false,
+    },
+    cartId: {
+      type: DataTypes.UUID,
+      allowNull: false,
+    },
+    productId: {
+      type: DataTypes.UUID,
+      allowNull: false,
+    },
+    variantId: {
+      type: DataTypes.UUID,
+      allowNull: false,
+    },
+    quantity: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 1,
+    },
+    priceAtAdd: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: false,
+    },
   },
-  { timestamps: true },
+  {
+    tableName: 'CartItems',
+    timestamps: true,
+  },
 );
 
-module.exports = mongoose.models.CartItem || mongoose.model('CartItem', cartItemSchema);
+module.exports = CartItem;

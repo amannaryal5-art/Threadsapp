@@ -47,6 +47,7 @@ export interface ProductVariant {
 export interface Product {
   id: string;
   name: string;
+  title?: string;
   slug: string;
   description?: string | null;
   categoryId: string;
@@ -54,6 +55,8 @@ export interface Product {
   basePrice: string | number;
   discountPercent: number;
   sellingPrice: string | number;
+  price?: string | number;
+  thumbnail?: string | null;
   fabric?: string | null;
   pattern?: string | null;
   occasion?: string | null;

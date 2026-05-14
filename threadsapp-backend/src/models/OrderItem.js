@@ -1,20 +1,65 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const { sequelize } = require('../config/database');
 
-const orderItemSchema = new mongoose.Schema(
+const OrderItem = sequelize.define(
+  'OrderItem',
   {
-    orderId: { type: mongoose.Schema.Types.ObjectId, ref: 'Order', required: true, index: true },
-    productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
-    variantId: { type: mongoose.Schema.Types.ObjectId, ref: 'ProductVariant', required: true },
-    productName: { type: String, required: true },
-    variantDetails: { type: Object, required: true },
-    productImage: String,
-    quantity: { type: Number, required: true },
-    mrp: { type: Number, required: true },
-    sellingPrice: { type: Number, required: true },
-    discountPercent: { type: Number, default: 0 },
-    totalPrice: { type: Number, required: true },
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
+      allowNull: false,
+    },
+    orderId: {
+      type: DataTypes.UUID,
+      allowNull: false,
+    },
+    productId: {
+      type: DataTypes.UUID,
+      allowNull: false,
+    },
+    variantId: {
+      type: DataTypes.UUID,
+      allowNull: false,
+    },
+    productName: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    variantDetails: {
+      type: DataTypes.JSONB,
+      allowNull: false,
+    },
+    productImage: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    quantity: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
+    mrp: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: false,
+    },
+    sellingPrice: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: false,
+    },
+    discountPercent: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
+    },
+    totalPrice: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: false,
+    },
   },
-  { timestamps: true },
+  {
+    tableName: 'OrderItems',
+    timestamps: true,
+  },
 );
 
-module.exports = mongoose.models.OrderItem || mongoose.model('OrderItem', orderItemSchema);
+module.exports = OrderItem;

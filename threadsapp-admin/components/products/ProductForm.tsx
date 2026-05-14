@@ -123,6 +123,23 @@ export function ProductForm({
   const images = form.watch("images");
   const sellingPrice = useMemo(() => basePrice - (basePrice * discountPercent) / 100, [basePrice, discountPercent]);
   const expectedMargin = useMemo(() => Math.max(basePrice - sellingPrice, 0), [basePrice, sellingPrice]);
+  const variantPricingRange = useMemo(() => {
+    const additions = variants.map((variant) => Number(variant.additionalPrice ?? 0));
+    const safeAdditions = additions.length ? additions : [0];
+    const minAddition = Math.min(...safeAdditions);
+    const maxAddition = Math.max(...safeAdditions);
+    const minMrp = Number(basePrice ?? 0) + minAddition;
+    const maxMrp = Number(basePrice ?? 0) + maxAddition;
+    const minSelling = minMrp - (minMrp * Number(discountPercent ?? 0)) / 100;
+    const maxSelling = maxMrp - (maxMrp * Number(discountPercent ?? 0)) / 100;
+
+    return {
+      minMrp,
+      maxMrp,
+      minSelling,
+      maxSelling,
+    };
+  }, [basePrice, discountPercent, variants]);
   const hasExistingProduct = Boolean(product?.id);
 
   const setFieldValue = <T extends keyof ProductFormValues>(field: T, value: ProductFormValues[T]) => {
@@ -479,7 +496,7 @@ export function ProductForm({
             <TabsContent value="variants">
               <Card className="border-slate-200 shadow-sm">
                 <CardContent className="pt-6">
-                  <VariantManager control={form.control} register={form.register} />
+                  <VariantManager control={form.control} register={form.register} variants={variants} basePrice={Number(basePrice ?? 0)} discountPercent={Number(discountPercent ?? 0)} />
                 </CardContent>
               </Card>
             </TabsContent>
@@ -559,8 +576,16 @@ export function ProductForm({
                   <span className="font-medium text-slate-900">Rs. {Number(basePrice || 0).toFixed(2)}</span>
                 </div>
                 <div className="flex items-center justify-between">
+                  <span>Variant MRP range</span>
+                  <span className="font-medium text-slate-900">
+                    Rs. {variantPricingRange.minMrp.toFixed(2)}{variantPricingRange.minMrp !== variantPricingRange.maxMrp ? ` - Rs. ${variantPricingRange.maxMrp.toFixed(2)}` : ""}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
                   <span>Live selling price</span>
-                  <span className="font-semibold text-slate-900">Rs. {sellingPrice.toFixed(2)}</span>
+                  <span className="font-semibold text-slate-900">
+                    Rs. {variantPricingRange.minSelling.toFixed(2)}{variantPricingRange.minSelling !== variantPricingRange.maxSelling ? ` - Rs. ${variantPricingRange.maxSelling.toFixed(2)}` : ""}
+                  </span>
                 </div>
               </div>
               <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">

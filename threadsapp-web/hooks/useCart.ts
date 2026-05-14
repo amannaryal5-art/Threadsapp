@@ -10,8 +10,14 @@ import type { CartItem } from "@/types/cart.types";
 interface CartResponse {
   cart?: { id: string };
   items: CartItem[];
+  mrpTotal: number;
   subtotal: number;
+  productDiscount: number;
   itemCount: number;
+  couponDiscount: number;
+  shippingCharge: number;
+  taxAmount: number;
+  totalAmount: number;
 }
 
 export function useCart() {

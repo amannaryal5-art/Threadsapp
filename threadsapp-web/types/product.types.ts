@@ -63,6 +63,7 @@ export interface ProductReview {
 export interface Product {
   id: string;
   name: string;
+  title?: string;
   slug: string;
   description?: string | null;
   categoryId: string;
@@ -70,6 +71,8 @@ export interface Product {
   basePrice: number | string;
   discountPercent: number;
   sellingPrice: number | string;
+  price?: number | string;
+  thumbnail?: string | null;
   fabric?: string | null;
   pattern?: string | null;
   occasion?: string | null;

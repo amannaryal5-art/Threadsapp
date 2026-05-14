@@ -1,6 +1,7 @@
-import Image from "next/image";
 import { AppButton } from "@/components/shared/AppButton";
 import { CouponInput } from "@/components/cart/CouponInput";
+import { ProductImage } from "@/components/shared/ProductImage";
+import { getProductThumbnail } from "@/lib/product-media";
 import { formatCurrency } from "@/lib/utils";
 import type { CartItem } from "@/types/cart.types";
 
@@ -26,7 +27,7 @@ export function ReviewStep({
         {items.map((item) => (
           <div key={item.id} className="flex gap-4 border-b border-secondary/10 pb-4 last:border-b-0 last:pb-0">
             <div className="relative h-20 w-20 overflow-hidden rounded-2xl bg-background">
-              <Image src={item.Product?.images?.[0]?.url ?? "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=600&q=80"} alt={item.Product?.name ?? "item"} fill className="object-cover" />
+              <ProductImage src={getProductThumbnail(item.Product)} alt={item.Product?.name ?? "item"} className="object-cover" sizes="80px" />
             </div>
             <div className="flex-1">
               <p className="font-medium text-secondary">{item.Product?.name}</p>

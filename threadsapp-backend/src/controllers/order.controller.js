@@ -17,16 +17,16 @@ exports.getOrders = asyncHandler(async (req, res) => {
   const where = { userId: req.user.id };
   if (req.query.status) where.status = req.query.status;
   const [orders, count] = await Promise.all([
-    Order.find(where).sort({ createdAt: -1 }).skip(offset).limit(limit).lean(),
-    Order.countDocuments(where),
+    Order.findAll({
+      where,
+      include: [{ model: OrderItem, as: 'items' }, { model: Payment, as: 'payment' }, { model: Address }],
+      order: [['createdAt', 'DESC']],
+      offset,
+      limit,
+    }),
+    Order.count({ where }),
   ]);
-  const orderIds = orders.map((o) => o._id);
-  const [items, payments] = await Promise.all([
-    OrderItem.find({ orderId: { $in: orderIds } }).lean(),
-    Payment.find({ orderId: { $in: orderIds } }).lean(),
-  ]);
-  const enriched = orders.map((o) => ({ ...o, items: items.filter((i) => String(i.orderId) === String(o._id)), payment: payments.find((p) => String(p.orderId) === String(o._id)) || null }));
-  return ApiResponse.success(res, 'Orders fetched successfully', { orders: enriched }, { page, limit, total: count, totalPages: Math.ceil(count / limit) });
+  return ApiResponse.success(res, 'Orders fetched successfully', { orders }, { page, limit, total: count, totalPages: Math.ceil(count / limit) });
 });
 
 exports.getOrderDetail = asyncHandler(async (req, res) => {

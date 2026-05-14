@@ -7,15 +7,21 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
-  experimental: {
-    outputFileTracingExcludes: {
-      "*": [
-        "node_modules/@swc/core-linux-x64-gnu",
-        "node_modules/@swc/core-linux-x64-musl",
-        "node_modules/typescript",
-        "node_modules/prettier"
-      ],
-    },
+  images: {
+    remotePatterns: [
+      { protocol: "https", hostname: "res.cloudinary.com" },
+      { protocol: "https", hostname: "images.unsplash.com" },
+      { protocol: "https", hostname: "plus.unsplash.com" },
+      { protocol: "http", hostname: "localhost", port: "5000", pathname: "/uploads/**" }
+    ]
+  },
+  outputFileTracingExcludes: {
+    "*": [
+      "node_modules/@swc/core-linux-x64-gnu",
+      "node_modules/@swc/core-linux-x64-musl",
+      "node_modules/typescript",
+      "node_modules/prettier"
+    ],
   },
 };
 

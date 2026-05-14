@@ -1,20 +1,66 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const { sequelize } = require('../config/database');
 
-const paymentSchema = new mongoose.Schema(
+const Payment = sequelize.define(
+  'Payment',
   {
-    orderId: { type: mongoose.Schema.Types.ObjectId, ref: 'Order', required: true, index: true },
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
-    razorpayOrderId: String,
-    razorpayPaymentId: String,
-    razorpaySignature: String,
-    amount: { type: Number, required: true },
-    currency: { type: String, default: 'INR' },
-    status: { type: String, enum: ['pending', 'paid', 'failed', 'refunded'], default: 'pending' },
-    method: String,
-    refundId: String,
-    refundAmount: Number,
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
+      allowNull: false,
+    },
+    orderId: {
+      type: DataTypes.UUID,
+      allowNull: false,
+    },
+    userId: {
+      type: DataTypes.UUID,
+      allowNull: false,
+    },
+    razorpayOrderId: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    razorpayPaymentId: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    razorpaySignature: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    amount: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: false,
+    },
+    currency: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: 'INR',
+    },
+    status: {
+      type: DataTypes.ENUM('pending', 'paid', 'failed', 'refunded'),
+      allowNull: false,
+      defaultValue: 'pending',
+    },
+    method: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    refundId: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    refundAmount: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: true,
+    },
   },
-  { timestamps: true },
+  {
+    tableName: 'Payments',
+    timestamps: true,
+  },
 );
 
-module.exports = mongoose.models.Payment || mongoose.model('Payment', paymentSchema);
+module.exports = Payment;

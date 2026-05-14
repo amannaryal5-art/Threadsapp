@@ -5,6 +5,7 @@ import { Heart, Search, ShoppingBag, User } from "lucide-react";
 import { CategoryMegaMenu } from "@/components/layout/CategoryMegaMenu";
 import { MobileNav } from "@/components/layout/MobileNav";
 import { CartDrawer } from "@/components/cart/CartDrawer";
+import { useCart } from "@/hooks/useCart";
 import { SearchOverlay } from "@/components/layout/SearchOverlay";
 import { MAIN_CATEGORIES } from "@/lib/constants";
 import { useAuthStore } from "@/store/authStore";
@@ -13,6 +14,7 @@ import { useUiStore } from "@/store/uiStore";
 import { useWishlistStore } from "@/store/wishlistStore";
 
 export function Navbar() {
+  useCart();
   const cartCount = useCartStore((state) => state.itemCount);
   const wishlistCount = useWishlistStore((state) => state.productIds.length);
   const openSearch = useUiStore((state) => state.openSearch);

@@ -23,9 +23,92 @@ const asyncHandler = require('../utils/asyncHandler');
 const paginate = require('../utils/paginate');
 const shippingService = require('../services/shipping.service');
 const paymentService = require('../services/payment.service');
+const { debugProductMedia, normalizeImage, normalizeImageUrl, normalizeProduct, normalizeProducts } = require('../utils/product-media');
+
+const adminProductIncludes = [
+  { model: Category },
+  { model: Brand },
+  { model: ProductImage, as: 'images' },
+  { model: ProductVariant, as: 'variants', include: [{ model: Inventory, as: 'inventory' }] },
+];
 
 const clearProductCache = async (product) => {
   if (product?.slug) await runtimeStore.del(`product:${product.slug}`);
+};
+
+const toFiniteNumber = (value, fallback) => {
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) ? numericValue : fallback;
+};
+
+const syncProductVariants = async (productId, variants = []) => {
+  const existingVariants = await ProductVariant.findAll({
+    where: { productId },
+    include: [{ model: Inventory, as: 'inventory' }],
+  });
+  const existingVariantMap = new Map(existingVariants.map((variant) => [variant.id, variant]));
+  const incomingVariantIds = new Set();
+
+  for (const incomingVariant of variants) {
+    const variantPayload = {
+      size: incomingVariant.size,
+      color: incomingVariant.color,
+      colorHex: incomingVariant.colorHex,
+      sku: incomingVariant.sku,
+      additionalPrice: toFiniteNumber(incomingVariant.additionalPrice, 0),
+    };
+    const quantity = Math.max(toFiniteNumber(incomingVariant.quantity, 0), 0);
+    const lowStockThreshold = Math.max(toFiniteNumber(incomingVariant.lowStockThreshold, 5), 0);
+
+    if (incomingVariant.id && existingVariantMap.has(incomingVariant.id)) {
+      const existingVariant = existingVariantMap.get(incomingVariant.id);
+      incomingVariantIds.add(existingVariant.id);
+      await existingVariant.update(variantPayload);
+      if (existingVariant.inventory) {
+        await existingVariant.inventory.update({ quantity, lowStockThreshold });
+      } else {
+        await Inventory.create({ variantId: existingVariant.id, quantity, lowStockThreshold });
+      }
+      continue;
+    }
+
+    const createdVariant = await ProductVariant.create({ ...variantPayload, productId });
+    incomingVariantIds.add(createdVariant.id);
+    await Inventory.create({ variantId: createdVariant.id, quantity, lowStockThreshold });
+  }
+
+  const variantsToDelete = existingVariants.filter((variant) => !incomingVariantIds.has(variant.id));
+  if (variantsToDelete.length) {
+    const variantIdsToDelete = variantsToDelete.map((variant) => variant.id);
+    await Inventory.destroy({ where: { variantId: variantIdsToDelete } });
+    await ProductVariant.destroy({ where: { id: variantIdsToDelete, productId } });
+  }
+};
+
+const buildProductPersistencePayload = (payload, currentProduct) => {
+  const basePrice = toFiniteNumber(payload.basePrice, Number(currentProduct?.basePrice ?? 0));
+  const discountPercent = toFiniteNumber(payload.discountPercent, Number(currentProduct?.discountPercent ?? 0));
+  const normalizedDiscountPercent = Math.min(Math.max(discountPercent, 0), 100);
+
+  return {
+    name: payload.name ?? currentProduct?.name,
+    slug: payload.slug || currentProduct?.slug || slugify(payload.name || currentProduct?.name || 'product', { lower: true, strict: true }),
+    description: payload.description ?? currentProduct?.description ?? '',
+    categoryId: payload.categoryId ?? currentProduct?.categoryId,
+    brandId: payload.brandId ?? currentProduct?.brandId,
+    basePrice,
+    discountPercent: normalizedDiscountPercent,
+    sellingPrice: Number((basePrice - (basePrice * normalizedDiscountPercent) / 100).toFixed(2)),
+    fabric: payload.fabric ?? currentProduct?.fabric ?? '',
+    pattern: payload.pattern ?? currentProduct?.pattern ?? '',
+    occasion: payload.occasion ?? currentProduct?.occasion ?? '',
+    fit: payload.fit ?? currentProduct?.fit ?? '',
+    care: payload.care ?? currentProduct?.care ?? '',
+    countryOfOrigin: payload.countryOfOrigin ?? currentProduct?.countryOfOrigin ?? 'India',
+    isActive: typeof payload.isActive === 'boolean' ? payload.isActive : currentProduct?.isActive ?? true,
+    isFeatured: typeof payload.isFeatured === 'boolean' ? payload.isFeatured : currentProduct?.isFeatured ?? false,
+    tags: Array.isArray(payload.tags) ? payload.tags : currentProduct?.tags ?? [],
+  };
 };
 
 exports.dashboard = asyncHandler(async (_req, res) => {
@@ -64,21 +147,18 @@ exports.blockUser = asyncHandler(async (req, res) => {
 });
 
 exports.getAdminProducts = asyncHandler(async (_req, res) => {
-  const products = await Product.findAll({ include: [{ model: ProductVariant, as: 'variants', include: [{ model: Inventory, as: 'inventory' }] }, { model: ProductImage, as: 'images' }] });
-  return ApiResponse.success(res, 'Products fetched successfully', { products });
+  const products = await Product.findAll({ include: adminProductIncludes });
+  const normalizedProducts = normalizeProducts(products, res.req);
+  debugProductMedia('admin.products', normalizedProducts.map((product) => ({ id: product.id, thumbnail: product.thumbnail, images: product.images })));
+  return ApiResponse.success(res, 'Products fetched successfully', { products: normalizedProducts });
 });
 
 exports.createProduct = asyncHandler(async (req, res) => {
   try {
-    const product = await Product.create({
-      ...req.body,
-      slug: req.body.slug || slugify(req.body.name, { lower: true, strict: true }),
-    });
-    for (const variant of req.body.variants || []) {
-      const createdVariant = await ProductVariant.create({ ...variant, productId: product.id });
-      await Inventory.create({ variantId: createdVariant.id, quantity: variant.quantity, lowStockThreshold: variant.lowStockThreshold });
-    }
-    return ApiResponse.success(res, 'Product created successfully', { product }, undefined, 201);
+    const product = await Product.create(buildProductPersistencePayload(req.body));
+    await syncProductVariants(product.id, req.body.variants || []);
+    const createdProduct = await Product.findByPk(product.id, { include: adminProductIncludes });
+    return ApiResponse.success(res, 'Product created successfully', { product: normalizeProduct(createdProduct, req) }, undefined, 201);
   } catch (error) {
     throw error;
   }
@@ -87,9 +167,19 @@ exports.createProduct = asyncHandler(async (req, res) => {
 exports.updateProduct = asyncHandler(async (req, res) => {
   const product = await Product.findByPk(req.params.id);
   if (!product) throw new ApiError(404, 'Product not found');
-  await product.update({ ...req.body, slug: req.body.slug || product.slug });
+  const previousSlug = product.slug;
+  const updatePayload = buildProductPersistencePayload(req.body, product);
+  debugProductMedia('admin.update-product.payload', {
+    id: product.id,
+    incoming: req.body,
+    normalized: updatePayload,
+  });
+  await product.update(updatePayload, { validate: true });
+  await syncProductVariants(product.id, req.body.variants || []);
+  await clearProductCache({ slug: previousSlug });
   await clearProductCache(product);
-  return ApiResponse.success(res, 'Product updated successfully', { product });
+  const refreshedProduct = await Product.findByPk(product.id, { include: adminProductIncludes });
+  return ApiResponse.success(res, 'Product updated successfully', { product: normalizeProduct(refreshedProduct, req) });
 });
 
 exports.deactivateProduct = asyncHandler(async (req, res) => {
@@ -105,19 +195,34 @@ exports.uploadProductImages = asyncHandler(async (req, res) => {
   const product = await Product.findByPk(req.params.id);
   if (!product) throw new ApiError(404, 'Product not found');
   const files = req.files || [];
+  if (!files.length) throw new ApiError(400, 'No images were uploaded');
+  debugProductMedia('upload.files', files.map((file) => ({
+    originalname: file.originalname,
+    filename: file.filename,
+    path: file.path,
+    url: file.url,
+    secure_url: file.secure_url,
+  })));
+  const existingImagesCount = await ProductImage.count({ where: { productId: product.id } });
   const images = await Promise.all(
     files.slice(0, 6).map((file, index) =>
       ProductImage.create({
         productId: product.id,
-        url: file.path,
+        url:
+          normalizeImageUrl(file.secure_url, req) ||
+          normalizeImageUrl(file.url, req) ||
+          normalizeImageUrl(file.filename ? `/uploads/${file.filename}` : null, req) ||
+          normalizeImageUrl(file.path, req),
         altText: file.originalname,
-        isPrimary: index === 0,
-        displayOrder: index,
+        isPrimary: existingImagesCount === 0 && index === 0,
+        displayOrder: existingImagesCount + index,
       }),
     ),
   );
   await clearProductCache(product);
-  return ApiResponse.success(res, 'Product images uploaded successfully', { images }, undefined, 201);
+  const normalizedImages = images.map((image) => normalizeImage(image, req));
+  debugProductMedia('upload.saved-images', normalizedImages);
+  return ApiResponse.success(res, 'Product images uploaded successfully', { images: normalizedImages }, undefined, 201);
 });
 
 exports.deleteProductImage = asyncHandler(async (req, res) => {

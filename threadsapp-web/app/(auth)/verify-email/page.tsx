@@ -64,8 +64,12 @@ export default function VerifyEmailPage() {
     sendEmailOtp.mutate(
       { email: pendingRegistration.email, name: pendingRegistration.name },
       {
-        onSuccess: () => {
-          toast.success(`OTP resent to ${pendingRegistration.email}`);
+        onSuccess: (data) => {
+          if (data.emailDelivered === false) {
+            toast.success("OTP regenerated. Check backend terminal because local email delivery is unavailable.");
+          } else {
+            toast.success(`OTP resent to ${pendingRegistration.email}`);
+          }
         }
       }
     );

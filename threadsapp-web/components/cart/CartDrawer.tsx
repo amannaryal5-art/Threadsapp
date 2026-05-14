@@ -1,10 +1,11 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
 import { AppButton } from "@/components/shared/AppButton";
+import { ProductImage } from "@/components/shared/ProductImage";
+import { getProductThumbnail } from "@/lib/product-media";
 import { formatCurrency } from "@/lib/utils";
 import { useCartStore } from "@/store/cartStore";
 import { useUiStore } from "@/store/uiStore";
@@ -36,12 +37,7 @@ export function CartDrawer() {
               {items.map((item) => (
                 <div key={item.id} className="flex gap-3 rounded-3xl bg-background p-3">
                   <div className="relative h-20 w-20 overflow-hidden rounded-2xl bg-white">
-                    <Image
-                      src={item.Product?.images?.[0]?.url ?? "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=600&q=80"}
-                      alt={item.Product?.name ?? "Cart item"}
-                      fill
-                      className="object-cover"
-                    />
+                    <ProductImage src={getProductThumbnail(item.Product)} alt={item.Product?.name ?? "Cart item"} className="object-cover" sizes="80px" />
                   </div>
                   <div className="flex-1">
                     <p className="text-sm font-medium text-secondary">{item.Product?.name}</p>

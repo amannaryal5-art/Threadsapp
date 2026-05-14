@@ -13,7 +13,7 @@ exports.createOrderSchema = Joi.object({
     .min(1)
     .required(),
   couponCode: Joi.string().allow('', null),
-  paymentMethod: Joi.string().valid('cod', 'upi', 'card').default('upi'),
+  paymentMethod: Joi.string().valid('cod', 'upi', 'card', 'netbanking', 'wallet').default('upi'),
 });
 
 exports.returnRequestSchema = Joi.object({

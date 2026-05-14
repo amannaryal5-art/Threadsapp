@@ -1,36 +1,103 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const { sequelize } = require('../config/database');
 
-const productSchema = new mongoose.Schema(
+const applyDerivedPricing = (product) => {
+  const basePrice = Number(product.basePrice || 0);
+  const discount = Number(product.discountPercent || 0);
+  product.sellingPrice = Number((basePrice - (basePrice * discount) / 100).toFixed(2));
+};
+
+const Product = sequelize.define(
+  'Product',
   {
-    name: { type: String, required: true },
-    slug: { type: String, required: true, unique: true, index: true },
-    description: String,
-    categoryId: { type: mongoose.Schema.Types.ObjectId, ref: 'Category', required: true, index: true },
-    brandId: { type: mongoose.Schema.Types.ObjectId, ref: 'Brand', required: true, index: true },
-    basePrice: { type: Number, required: true },
-    discountPercent: { type: Number, default: 0 },
-    sellingPrice: { type: Number, required: true },
-    fabric: String,
-    pattern: String,
-    occasion: String,
-    fit: String,
-    care: String,
-    countryOfOrigin: { type: String, default: 'India' },
-    isActive: { type: Boolean, default: true, index: true },
-    isFeatured: { type: Boolean, default: false },
-    averageRating: { type: Number, default: 0 },
-    totalReviews: { type: Number, default: 0 },
-    totalSold: { type: Number, default: 0 },
-    tags: { type: [String], default: [] },
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
+      allowNull: false,
+    },
+    name: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    slug: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      unique: true,
+    },
+    description: DataTypes.TEXT,
+    categoryId: {
+      type: DataTypes.UUID,
+      allowNull: false,
+    },
+    brandId: {
+      type: DataTypes.UUID,
+      allowNull: false,
+    },
+    basePrice: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: false,
+    },
+    discountPercent: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
+    },
+    sellingPrice: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: false,
+    },
+    fabric: DataTypes.STRING,
+    pattern: DataTypes.STRING,
+    occasion: DataTypes.STRING,
+    fit: DataTypes.STRING,
+    care: DataTypes.TEXT,
+    countryOfOrigin: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: 'India',
+    },
+    isActive: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: true,
+    },
+    isFeatured: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
+    averageRating: {
+      type: DataTypes.FLOAT,
+      allowNull: false,
+      defaultValue: 0,
+    },
+    totalReviews: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
+    },
+    totalSold: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
+    },
+    tags: {
+      type: DataTypes.ARRAY(DataTypes.STRING),
+      allowNull: false,
+      defaultValue: [],
+    },
   },
-  { timestamps: true },
+  {
+    tableName: 'Products',
+    timestamps: true,
+    hooks: {
+      beforeValidate: applyDerivedPricing,
+      beforeCreate: applyDerivedPricing,
+      beforeUpdate: applyDerivedPricing,
+      beforeSave: applyDerivedPricing,
+    },
+  },
 );
 
-productSchema.pre('validate', function onValidate(next) {
-  const basePrice = Number(this.basePrice || 0);
-  const discount = Number(this.discountPercent || 0);
-  this.sellingPrice = Number((basePrice - (basePrice * discount) / 100).toFixed(2));
-  next();
-});
-
-module.exports = mongoose.models.Product || mongoose.model('Product', productSchema);
+module.exports = Product;

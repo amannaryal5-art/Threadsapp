@@ -17,7 +17,7 @@ router.put('/users/:id/block', controller.blockUser);
 
 router.get('/products', controller.getAdminProducts);
 router.post('/products', validate(productSchema), controller.createProduct);
-router.put('/products/:id', controller.updateProduct);
+router.put('/products/:id', validate(productSchema), controller.updateProduct);
 router.delete('/products/:id', controller.deactivateProduct);
 router.post('/products/:id/images', upload.array('images', 6), controller.uploadProductImages);
 router.delete('/products/:id/images/:imageId', controller.deleteProductImage);

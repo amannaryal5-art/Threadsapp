@@ -1,6 +1,8 @@
 import { clsx, type ClassValue } from "clsx";
 import { format } from "date-fns";
 import { twMerge } from "tailwind-merge";
+import axios from "axios";
+import type { ApiResponse } from "@/types/api.types";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -74,4 +76,19 @@ export function setCookie(name: string, value: string, days = 7) {
 export function deleteCookie(name: string) {
   if (typeof document === "undefined") return;
   document.cookie = `${name}=; Max-Age=0; path=/; SameSite=Lax`;
+}
+
+export function parseApiError(error: unknown) {
+  if (axios.isAxiosError<ApiResponse<unknown>>(error)) {
+    const response = error.response?.data;
+    const fieldMessage = response?.errors?.[0]?.message;
+    if (fieldMessage) return fieldMessage;
+    if (typeof response?.message === "string" && response.message.trim()) return response.message;
+  }
+
+  if (error instanceof Error && error.message.trim()) {
+    return error.message;
+  }
+
+  return "Something went wrong.";
 }

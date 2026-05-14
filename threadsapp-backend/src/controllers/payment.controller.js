@@ -15,6 +15,7 @@ exports.createOrder = asyncHandler(async (req, res) => {
   if (orderId) {
     const order = await Order.findByPk(orderId);
     if (!order) throw new ApiError(404, 'Order not found');
+    if (String(order.userId) !== String(req.user.id)) throw new ApiError(403, 'You are not allowed to pay for this order');
 
     const payment = await Payment.findOne({ where: { orderId: order.id } });
     if (!payment) throw new ApiError(404, 'Payment record not found for this order');
@@ -42,10 +43,53 @@ exports.createOrder = asyncHandler(async (req, res) => {
 
 exports.verifyPayment = asyncHandler(async (req, res) => {
   const { orderId, razorpayOrderId, razorpayPaymentId, razorpaySignature, method } = req.body;
+  const order = await Order.findByPk(orderId);
+  if (!order) throw new ApiError(404, 'Order not found');
+  if (String(order.userId) !== String(req.user.id)) throw new ApiError(403, 'You are not allowed to verify payment for this order');
   const valid = paymentService.verifySignature({ orderId: razorpayOrderId, paymentId: razorpayPaymentId, signature: razorpaySignature });
   if (!valid) throw new ApiError(400, 'Invalid payment signature');
-  const order = await orderService.finalizePaidOrder({ orderId, razorpayPaymentId, razorpaySignature, method });
-  return ApiResponse.success(res, 'Payment verified successfully', { order });
+  const finalizedOrder = await orderService.finalizePaidOrder({ orderId, razorpayPaymentId, razorpaySignature, method });
+  return ApiResponse.success(res, 'Payment verified successfully', { order: finalizedOrder });
+});
+
+exports.syncPayment = asyncHandler(async (req, res) => {
+  const order = await Order.findByPk(req.params.orderId, { include: [{ model: Payment, as: 'payment' }] });
+  if (!order) throw new ApiError(404, 'Order not found');
+  if (String(order.userId) !== String(req.user.id)) throw new ApiError(403, 'You are not allowed to sync payment for this order');
+
+  if (order.paymentStatus === 'paid') {
+    return ApiResponse.success(res, 'Payment already synced', { order, paymentStatus: 'paid' });
+  }
+
+  const razorpayOrderId = order.payment?.razorpayOrderId;
+  if (!razorpayOrderId) {
+    throw new ApiError(400, 'Razorpay order is not available for this payment');
+  }
+
+  const paymentsResponse = await paymentService.fetchPaymentsForRazorpayOrder(razorpayOrderId);
+  const payments = paymentsResponse?.items || paymentsResponse?.payments || [];
+  const capturedPayment = payments.find((item) => item.status === 'captured' || item.captured === true);
+
+  if (capturedPayment) {
+    const finalizedOrder = await orderService.finalizePaidOrder({
+      orderId: order.id,
+      razorpayPaymentId: capturedPayment.id,
+      razorpaySignature: 'sync',
+      method: capturedPayment.method || order.payment?.method || 'upi',
+    });
+
+    return ApiResponse.success(res, 'Payment synced successfully', { order: finalizedOrder, paymentStatus: 'paid' });
+  }
+
+  const failedPayment = payments.find((item) => item.status === 'failed');
+  if (failedPayment && order.payment) {
+    order.payment.status = 'failed';
+    order.payment.razorpayPaymentId = failedPayment.id;
+    order.payment.method = failedPayment.method || order.payment.method;
+    await order.payment.save();
+  }
+
+  return ApiResponse.success(res, 'Payment is still pending', { order, paymentStatus: 'pending' });
 });
 
 exports.webhook = asyncHandler(async (req, res) => {
@@ -88,6 +132,7 @@ exports.webhook = asyncHandler(async (req, res) => {
 exports.markCod = asyncHandler(async (req, res) => {
   const order = await Order.findByPk(req.params.orderId);
   if (!order) throw new ApiError(404, 'Order not found');
+  if (String(order.userId) !== String(req.user.id)) throw new ApiError(403, 'You are not allowed to update payment for this order');
   let payment = await Payment.findOne({ where: { orderId: order.id } });
   if (!payment) payment = await Payment.create({ orderId: order.id, userId: order.userId, amount: order.totalAmount });
   payment.method = 'cod';

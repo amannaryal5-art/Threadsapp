@@ -1,11 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const controller = require('../controllers/payment.controller');
+const { authenticate } = require('../middleware/auth.middleware');
 
-router.post('/create-order', controller.createOrder);
-router.post('/verify', controller.verifyPayment);
-// Razorpay requires raw body for webhook signature verification.
-router.post('/webhook', express.raw({ type: 'application/json' }), controller.webhook);
-router.post('/:orderId/cod', controller.markCod);
+router.post('/webhook', controller.webhook);
+router.post('/create-order', authenticate, controller.createOrder);
+router.post('/verify', authenticate, controller.verifyPayment);
+router.post('/:orderId/sync', authenticate, controller.syncPayment);
+router.post('/:orderId/cod', authenticate, controller.markCod);
 
 module.exports = router;

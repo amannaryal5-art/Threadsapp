@@ -1,4 +1,4 @@
-const Op = { in: '$in' };
+const { Op } = require('sequelize');
 const runtimeStore = require('../lib/runtime-store');
 const {
   sequelize,
@@ -19,6 +19,7 @@ const notificationService = require('./notification.service');
 const emailService = require('./email.service');
 const invoiceService = require('./invoice.service');
 const shippingService = require('./shipping.service');
+const { getVariantMrp, getVariantSellingPrice } = require('../utils/pricing');
 
 const buildOrderNumber = async () => {
   const count = await Order.count();
@@ -79,7 +80,7 @@ exports.createOrder = async ({ userId, addressId, items, couponCode, paymentMeth
 
       const product = variant.Product;
       categoryIds.push(product.categoryId);
-      const unitPrice = Number(product.sellingPrice) + Number(variant.additionalPrice);
+      const unitPrice = getVariantSellingPrice(product, variant);
       const totalPrice = unitPrice * item.quantity;
       subtotal += totalPrice;
 
@@ -90,7 +91,7 @@ exports.createOrder = async ({ userId, addressId, items, couponCode, paymentMeth
         variantDetails: { size: variant.size, color: variant.color, sku: variant.sku },
         productImage: product.images.find((image) => image.isPrimary)?.url || product.images[0]?.url || null,
         quantity: item.quantity,
-        mrp: product.basePrice,
+        mrp: getVariantMrp(product, variant),
         sellingPrice: unitPrice.toFixed(2),
         discountPercent: product.discountPercent,
         totalPrice: totalPrice.toFixed(2),
@@ -116,13 +117,6 @@ exports.createOrder = async ({ userId, addressId, items, couponCode, paymentMeth
     const totalAmount = taxableAmount + taxAmount;
     const orderNumber = await buildOrderNumber();
     const isCod = paymentMethod === 'cod';
-    const razorpayOrder = isCod
-      ? null
-      : await paymentService.createRazorpayOrder({
-          amount: totalAmount,
-          receipt: orderNumber,
-          notes: { userId, orderNumber },
-        });
 
     const transaction = await sequelize.transaction();
     try {
@@ -139,7 +133,7 @@ exports.createOrder = async ({ userId, addressId, items, couponCode, paymentMeth
           taxAmount: taxAmount.toFixed(2),
           totalAmount: totalAmount.toFixed(2),
           status: isCod ? 'confirmed' : 'pending_payment',
-          paymentStatus: isCod ? 'pending' : 'pending',
+          paymentStatus: 'pending',
         },
         { transaction },
       );
@@ -149,7 +143,7 @@ exports.createOrder = async ({ userId, addressId, items, couponCode, paymentMeth
         {
           orderId: order.id,
           userId,
-          razorpayOrderId: razorpayOrder?.id || null,
+          razorpayOrderId: null,
           amount: totalAmount.toFixed(2),
           status: 'pending',
           method: paymentMethod,
@@ -178,7 +172,6 @@ exports.createOrder = async ({ userId, addressId, items, couponCode, paymentMeth
         user,
         address,
         coupon,
-        razorpayOrder,
         summary: {
           subtotal: Number(subtotal.toFixed(2)),
           couponDiscount: Number(couponDiscount.toFixed(2)),

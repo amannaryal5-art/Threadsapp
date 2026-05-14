@@ -2,7 +2,6 @@
 
 import api from "@/lib/axios";
 import { APP_NAME, RAZORPAY_KEY } from "@/lib/constants";
-import type { Address } from "@/types/user.types";
 
 declare global {
   interface Window {
@@ -14,7 +13,6 @@ declare global {
 
 interface LaunchCheckoutParams {
   orderId: string;
-  totalAmount: number;
   email?: string | null;
   contact?: string | null;
   onSuccess: (orderId: string) => void;
@@ -33,9 +31,7 @@ export async function loadRazorpayScript() {
 }
 
 export async function createPaymentOrder(payload: {
-  amount: number;
-  currency?: string;
-  receipt: string;
+  orderId: string;
 }) {
   const response = await api.post("/payments/create-order", payload);
   return response.data.data.razorpayOrder;
@@ -43,7 +39,6 @@ export async function createPaymentOrder(payload: {
 
 export async function launchRazorpayCheckout({
   orderId,
-  totalAmount,
   email,
   contact,
   onSuccess,
@@ -55,32 +50,51 @@ export async function launchRazorpayCheckout({
     return;
   }
 
+  if (!RAZORPAY_KEY) {
+    onFailure?.();
+    throw new Error("NEXT_PUBLIC_RAZORPAY_KEY is missing");
+  }
+
   const razorpayOrder = await createPaymentOrder({
-    amount: totalAmount,
-    currency: "INR",
-    receipt: orderId
+    orderId
   });
 
   const checkout = new window.Razorpay({
     key: RAZORPAY_KEY,
-    amount: totalAmount * 100,
+    order_id: razorpayOrder.id,
     currency: "INR",
     name: APP_NAME,
-    order_id: razorpayOrder.id,
     prefill: { email, contact },
     theme: { color: "#FF6B6B" },
     handler: async (response: Record<string, string>) => {
-      await api.post("/payments/verify", {
-        orderId,
-        razorpayOrderId: response.razorpay_order_id,
-        razorpayPaymentId: response.razorpay_payment_id,
-        razorpaySignature: response.razorpay_signature,
-        method: "razorpay"
-      });
-      onSuccess(orderId);
+      try {
+        await api.post("/payments/verify", {
+          orderId,
+          razorpayOrderId: response.razorpay_order_id,
+          razorpayPaymentId: response.razorpay_payment_id,
+          razorpaySignature: response.razorpay_signature,
+          method: "razorpay"
+        });
+        onSuccess(orderId);
+      } catch (error) {
+        console.error("Razorpay verification failed", error);
+        onFailure?.();
+      }
     },
     modal: {
-      ondismiss: onFailure
+      ondismiss: async () => {
+        try {
+          const syncResponse = await api.post(`/payments/${orderId}/sync`);
+          if (syncResponse.data?.data?.paymentStatus === "paid") {
+            onSuccess(orderId);
+            return;
+          }
+        } catch (error) {
+          console.error("Razorpay payment sync after dismiss failed", error);
+        }
+
+        onFailure?.();
+      }
     }
   });
 

@@ -12,6 +12,7 @@ export function AddToCartBar({ product, variant }: { product: Product; variant: 
   const addItem = useCartStore((state) => state.addItem);
   const openCartDrawer = useUiStore((state) => state.openCartDrawer);
   const toggleWishlist = useWishlistStore((state) => state.toggleWishlist);
+  const inStock = (variant.inventory?.quantity ?? 0) > 0;
   return (
     <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-secondary/10 bg-white p-4 lg:hidden">
       <div className="container flex gap-3">
@@ -21,9 +22,14 @@ export function AddToCartBar({ product, variant }: { product: Product; variant: 
         </AppButton>
         <AppButton
           className="flex-1"
+          disabled={!inStock}
           onClick={async () => {
             if (!variant) {
               toast.error("Select a size before adding to cart.");
+              return;
+            }
+            if (!inStock) {
+              toast.error("This size is out of stock.");
               return;
             }
             await addItem({ product, variant, quantity: 1 });
@@ -31,7 +37,7 @@ export function AddToCartBar({ product, variant }: { product: Product; variant: 
           }}
         >
           <ShoppingBag className="h-4 w-4" />
-          Add to Cart
+          {inStock ? "Add to Cart" : "Out of Stock"}
         </AppButton>
       </div>
     </div>

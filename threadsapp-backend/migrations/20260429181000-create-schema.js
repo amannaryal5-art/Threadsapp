@@ -1,22 +1,91 @@
 'use strict';
 
 const enumTypes = [
-  "CREATE TYPE \"enum_Users_gender\" AS ENUM ('male','female','other','prefer_not_to_say');",
-  "CREATE TYPE \"enum_Users_role\" AS ENUM ('user','admin');",
-  "CREATE TYPE \"enum_Addresses_type\" AS ENUM ('home','work','other');",
-  "CREATE TYPE \"enum_Payments_status\" AS ENUM ('pending','paid','failed','refunded');",
-  "CREATE TYPE \"enum_Orders_status\" AS ENUM ('pending_payment','confirmed','processing','shipped','out_for_delivery','delivered','cancelled','return_requested','return_picked','refunded');",
-  "CREATE TYPE \"enum_Orders_paymentStatus\" AS ENUM ('pending','paid','failed','refunded');",
-  "CREATE TYPE \"enum_Coupons_type\" AS ENUM ('percent','flat');",
-  "CREATE TYPE \"enum_Reviews_fit\" AS ENUM ('runs_small','true_to_size','runs_large');",
-  "CREATE TYPE \"enum_Notifications_type\" AS ENUM ('order','payment','offer','system');",
-  "CREATE TYPE \"enum_Returns_reason\" AS ENUM ('wrong_size','wrong_item','damaged','not_as_described','changed_mind');",
-  "CREATE TYPE \"enum_Returns_status\" AS ENUM ('requested','approved','rejected','pickup_scheduled','picked','refund_initiated','refunded');",
-  "CREATE TYPE \"enum_Banners_targetType\" AS ENUM ('category','product','url','none');",
+  `DO $$ BEGIN
+     CREATE TYPE "enum_users_gender" AS ENUM ('male','female','other','prefer_not_to_say');
+   EXCEPTION
+     WHEN duplicate_object THEN NULL;
+   END $$;`,
+  `DO $$ BEGIN
+     CREATE TYPE "enum_users_role" AS ENUM ('user','admin');
+   EXCEPTION
+     WHEN duplicate_object THEN NULL;
+   END $$;`,
+  `DO $$ BEGIN
+     CREATE TYPE "enum_addresses_type" AS ENUM ('home','work','other');
+   EXCEPTION
+     WHEN duplicate_object THEN NULL;
+   END $$;`,
+  `DO $$ BEGIN
+     CREATE TYPE "enum_payments_status" AS ENUM ('pending','paid','failed','refunded');
+   EXCEPTION
+     WHEN duplicate_object THEN NULL;
+   END $$;`,
+  `DO $$ BEGIN
+     CREATE TYPE "enum_orders_status" AS ENUM ('pending_payment','confirmed','processing','shipped','out_for_delivery','delivered','cancelled','return_requested','return_picked','refunded');
+   EXCEPTION
+     WHEN duplicate_object THEN NULL;
+   END $$;`,
+  `DO $$ BEGIN
+     CREATE TYPE "enum_orders_paymentstatus" AS ENUM ('pending','paid','failed','refunded');
+   EXCEPTION
+     WHEN duplicate_object THEN NULL;
+   END $$;`,
+  `DO $$ BEGIN
+     CREATE TYPE "enum_coupons_type" AS ENUM ('percent','flat');
+   EXCEPTION
+     WHEN duplicate_object THEN NULL;
+   END $$;`,
+  `DO $$ BEGIN
+     CREATE TYPE "enum_reviews_fit" AS ENUM ('runs_small','true_to_size','runs_large');
+   EXCEPTION
+     WHEN duplicate_object THEN NULL;
+   END $$;`,
+  `DO $$ BEGIN
+     CREATE TYPE "enum_notifications_type" AS ENUM ('order','payment','offer','system');
+   EXCEPTION
+     WHEN duplicate_object THEN NULL;
+   END $$;`,
+  `DO $$ BEGIN
+     CREATE TYPE "enum_returns_reason" AS ENUM ('wrong_size','wrong_item','damaged','not_as_described','changed_mind');
+   EXCEPTION
+     WHEN duplicate_object THEN NULL;
+   END $$;`,
+  `DO $$ BEGIN
+     CREATE TYPE "enum_returns_status" AS ENUM ('requested','approved','rejected','pickup_scheduled','picked','refund_initiated','refunded');
+   EXCEPTION
+     WHEN duplicate_object THEN NULL;
+   END $$;`,
+  `DO $$ BEGIN
+     CREATE TYPE "enum_banners_targettype" AS ENUM ('category','product','url','none');
+   EXCEPTION
+     WHEN duplicate_object THEN NULL;
+   END $$;`,
 ];
 
 module.exports = {
   async up(queryInterface, Sequelize) {
+    const tableExists = async (tableName) => {
+      const [rows] = await queryInterface.sequelize.query(
+        `SELECT EXISTS (
+          SELECT 1
+          FROM information_schema.tables
+          WHERE table_schema = 'public' AND table_name = :tableName
+        ) AS "exists";`,
+        {
+          replacements: { tableName },
+        },
+      );
+      return Boolean(rows?.[0]?.exists);
+    };
+
+    const createTableIfMissing = async (tableName, schema) => {
+      if (await tableExists(tableName)) {
+        return;
+      }
+      await queryInterface.createTable(tableName, schema);
+    };
+
     for (const sql of enumTypes) {
       await queryInterface.sequelize.query(sql);
     }
@@ -27,24 +96,24 @@ module.exports = {
       updatedAt: { type: Sequelize.DATE, allowNull: false, defaultValue: Sequelize.literal('CURRENT_TIMESTAMP') },
     };
 
-    await queryInterface.createTable('Users', {
+    await createTableIfMissing('Users', {
       ...common,
       name: { type: Sequelize.STRING, allowNull: false },
       email: { type: Sequelize.STRING, unique: true },
       phone: { type: Sequelize.STRING, allowNull: false, unique: true },
       passwordHash: { type: Sequelize.STRING },
       profilePhoto: { type: Sequelize.STRING },
-      gender: { type: 'enum_Users_gender', defaultValue: 'prefer_not_to_say' },
+      gender: { type: 'enum_users_gender', defaultValue: 'prefer_not_to_say' },
       dateOfBirth: { type: Sequelize.DATEONLY },
       isPhoneVerified: { type: Sequelize.BOOLEAN, defaultValue: false },
       isEmailVerified: { type: Sequelize.BOOLEAN, defaultValue: false },
       isActive: { type: Sequelize.BOOLEAN, defaultValue: true },
-      role: { type: 'enum_Users_role', defaultValue: 'user' },
+      role: { type: 'enum_users_role', defaultValue: 'user' },
       fcmToken: { type: Sequelize.STRING },
       loyaltyPoints: { type: Sequelize.INTEGER, defaultValue: 0 },
     });
 
-    await queryInterface.createTable('Categories', {
+    await createTableIfMissing('Categories', {
       ...common,
       name: { type: Sequelize.STRING, allowNull: false, unique: true },
       slug: { type: Sequelize.STRING, allowNull: false, unique: true },
@@ -55,7 +124,7 @@ module.exports = {
       displayOrder: { type: Sequelize.INTEGER, defaultValue: 0 },
     });
 
-    await queryInterface.createTable('Brands', {
+    await createTableIfMissing('Brands', {
       ...common,
       name: { type: Sequelize.STRING, allowNull: false, unique: true },
       slug: { type: Sequelize.STRING, allowNull: false, unique: true },
@@ -64,7 +133,7 @@ module.exports = {
       isActive: { type: Sequelize.BOOLEAN, defaultValue: true },
     });
 
-    await queryInterface.createTable('Addresses', {
+    await createTableIfMissing('Addresses', {
       ...common,
       userId: { type: Sequelize.UUID, allowNull: false, references: { model: 'Users', key: 'id' }, onDelete: 'CASCADE' },
       fullName: { type: Sequelize.STRING, allowNull: false },
@@ -77,13 +146,13 @@ module.exports = {
       state: { type: Sequelize.STRING, allowNull: false },
       pincode: { type: Sequelize.STRING, allowNull: false },
       country: { type: Sequelize.STRING, defaultValue: 'India' },
-      type: { type: 'enum_Addresses_type', defaultValue: 'home' },
+      type: { type: 'enum_addresses_type', defaultValue: 'home' },
       isDefault: { type: Sequelize.BOOLEAN, defaultValue: false },
       lat: { type: Sequelize.FLOAT },
       lng: { type: Sequelize.FLOAT },
     });
 
-    await queryInterface.createTable('Products', {
+    await createTableIfMissing('Products', {
       ...common,
       name: { type: Sequelize.STRING, allowNull: false },
       slug: { type: Sequelize.STRING, allowNull: false, unique: true },
@@ -108,7 +177,7 @@ module.exports = {
       searchVector: { type: 'TSVECTOR' },
     });
 
-    await queryInterface.createTable('ProductVariants', {
+    await createTableIfMissing('ProductVariants', {
       ...common,
       productId: { type: Sequelize.UUID, allowNull: false, references: { model: 'Products', key: 'id' }, onDelete: 'CASCADE' },
       size: { type: Sequelize.STRING, allowNull: false },
@@ -118,7 +187,7 @@ module.exports = {
       additionalPrice: { type: Sequelize.DECIMAL(10, 2), defaultValue: 0 },
     });
 
-    await queryInterface.createTable('ProductImages', {
+    await createTableIfMissing('ProductImages', {
       ...common,
       productId: { type: Sequelize.UUID, allowNull: false, references: { model: 'Products', key: 'id' }, onDelete: 'CASCADE' },
       variantId: { type: Sequelize.UUID, references: { model: 'ProductVariants', key: 'id' }, onDelete: 'SET NULL' },
@@ -128,19 +197,19 @@ module.exports = {
       displayOrder: { type: Sequelize.INTEGER, defaultValue: 0 },
     });
 
-    await queryInterface.createTable('Inventories', {
+    await createTableIfMissing('Inventories', {
       ...common,
       variantId: { type: Sequelize.UUID, allowNull: false, unique: true, references: { model: 'ProductVariants', key: 'id' }, onDelete: 'CASCADE' },
       quantity: { type: Sequelize.INTEGER, defaultValue: 0 },
       lowStockThreshold: { type: Sequelize.INTEGER, defaultValue: 5 },
     });
 
-    await queryInterface.createTable('Carts', {
+    await createTableIfMissing('Carts', {
       ...common,
       userId: { type: Sequelize.UUID, allowNull: false, unique: true, references: { model: 'Users', key: 'id' }, onDelete: 'CASCADE' },
     });
 
-    await queryInterface.createTable('CartItems', {
+    await createTableIfMissing('CartItems', {
       ...common,
       cartId: { type: Sequelize.UUID, allowNull: false, references: { model: 'Carts', key: 'id' }, onDelete: 'CASCADE' },
       productId: { type: Sequelize.UUID, allowNull: false, references: { model: 'Products', key: 'id' } },
@@ -149,20 +218,24 @@ module.exports = {
       priceAtAdd: { type: Sequelize.DECIMAL(10, 2), allowNull: false },
     });
 
-    await queryInterface.createTable('Wishlists', {
+    await createTableIfMissing('Wishlists', {
       ...common,
       userId: { type: Sequelize.UUID, allowNull: false, references: { model: 'Users', key: 'id' }, onDelete: 'CASCADE' },
       productId: { type: Sequelize.UUID, allowNull: false, references: { model: 'Products', key: 'id' }, onDelete: 'CASCADE' },
     });
-    await queryInterface.addConstraint('Wishlists', { fields: ['userId', 'productId'], type: 'unique', name: 'wishlists_user_product_unique' });
+    try {
+      await queryInterface.addConstraint('Wishlists', { fields: ['userId', 'productId'], type: 'unique', name: 'wishlists_user_product_unique' });
+    } catch (error) {
+      if (!String(error.message).includes('already exists')) throw error;
+    }
 
-    await queryInterface.createTable('Orders', {
+    await createTableIfMissing('Orders', {
       ...common,
       orderNumber: { type: Sequelize.STRING, allowNull: false, unique: true },
       userId: { type: Sequelize.UUID, allowNull: false, references: { model: 'Users', key: 'id' } },
       addressId: { type: Sequelize.UUID, allowNull: false, references: { model: 'Addresses', key: 'id' } },
-      status: { type: 'enum_Orders_status', defaultValue: 'pending_payment' },
-      paymentStatus: { type: 'enum_Orders_paymentStatus', defaultValue: 'pending' },
+      status: { type: 'enum_orders_status', defaultValue: 'pending_payment' },
+      paymentStatus: { type: 'enum_orders_paymentstatus', defaultValue: 'pending' },
       subtotal: { type: Sequelize.DECIMAL(10, 2), allowNull: false },
       discountAmount: { type: Sequelize.DECIMAL(10, 2), defaultValue: 0 },
       couponCode: { type: Sequelize.STRING },
@@ -181,7 +254,7 @@ module.exports = {
       invoiceUrl: { type: Sequelize.STRING },
     });
 
-    await queryInterface.createTable('OrderItems', {
+    await createTableIfMissing('OrderItems', {
       ...common,
       orderId: { type: Sequelize.UUID, allowNull: false, references: { model: 'Orders', key: 'id' }, onDelete: 'CASCADE' },
       productId: { type: Sequelize.UUID, allowNull: false, references: { model: 'Products', key: 'id' } },
@@ -196,7 +269,7 @@ module.exports = {
       totalPrice: { type: Sequelize.DECIMAL(10, 2), allowNull: false },
     });
 
-    await queryInterface.createTable('Payments', {
+    await createTableIfMissing('Payments', {
       ...common,
       orderId: { type: Sequelize.UUID, allowNull: false, references: { model: 'Orders', key: 'id' }, onDelete: 'CASCADE' },
       userId: { type: Sequelize.UUID, allowNull: false, references: { model: 'Users', key: 'id' } },
@@ -205,17 +278,17 @@ module.exports = {
       razorpaySignature: { type: Sequelize.STRING },
       amount: { type: Sequelize.DECIMAL(10, 2), allowNull: false },
       currency: { type: Sequelize.STRING, defaultValue: 'INR' },
-      status: { type: 'enum_Payments_status', defaultValue: 'pending' },
+      status: { type: 'enum_payments_status', defaultValue: 'pending' },
       method: { type: Sequelize.STRING },
       refundId: { type: Sequelize.STRING },
       refundAmount: { type: Sequelize.DECIMAL(10, 2) },
     });
 
-    await queryInterface.createTable('Coupons', {
+    await createTableIfMissing('Coupons', {
       ...common,
       code: { type: Sequelize.STRING, allowNull: false, unique: true },
       description: { type: Sequelize.STRING },
-      type: { type: 'enum_Coupons_type', allowNull: false },
+      type: { type: 'enum_coupons_type', allowNull: false },
       value: { type: Sequelize.DECIMAL(10, 2), allowNull: false },
       minOrderAmount: { type: Sequelize.DECIMAL(10, 2), defaultValue: 0 },
       maxDiscount: { type: Sequelize.DECIMAL(10, 2) },
@@ -227,7 +300,7 @@ module.exports = {
       applicableCategories: { type: Sequelize.ARRAY(Sequelize.UUID), defaultValue: null },
     });
 
-    await queryInterface.createTable('CouponUsages', {
+    await createTableIfMissing('CouponUsages', {
       ...common,
       couponId: { type: Sequelize.UUID, allowNull: false, references: { model: 'Coupons', key: 'id' } },
       userId: { type: Sequelize.UUID, allowNull: false, references: { model: 'Users', key: 'id' } },
@@ -235,7 +308,7 @@ module.exports = {
       discountApplied: { type: Sequelize.DECIMAL(10, 2), allowNull: false },
     });
 
-    await queryInterface.createTable('Reviews', {
+    await createTableIfMissing('Reviews', {
       ...common,
       productId: { type: Sequelize.UUID, allowNull: false, references: { model: 'Products', key: 'id' }, onDelete: 'CASCADE' },
       userId: { type: Sequelize.UUID, allowNull: false, references: { model: 'Users', key: 'id' } },
@@ -244,40 +317,40 @@ module.exports = {
       title: { type: Sequelize.STRING },
       comment: { type: Sequelize.TEXT },
       photos: { type: Sequelize.ARRAY(Sequelize.STRING), defaultValue: [] },
-      fit: { type: 'enum_Reviews_fit' },
+      fit: { type: 'enum_reviews_fit' },
       isVerifiedPurchase: { type: Sequelize.BOOLEAN, defaultValue: true },
       helpfulCount: { type: Sequelize.INTEGER, defaultValue: 0 },
       isApproved: { type: Sequelize.BOOLEAN, defaultValue: true },
     });
 
-    await queryInterface.createTable('Notifications', {
+    await createTableIfMissing('Notifications', {
       ...common,
       userId: { type: Sequelize.UUID, allowNull: false, references: { model: 'Users', key: 'id' }, onDelete: 'CASCADE' },
       title: { type: Sequelize.STRING, allowNull: false },
       body: { type: Sequelize.STRING, allowNull: false },
-      type: { type: 'enum_Notifications_type', defaultValue: 'system' },
+      type: { type: 'enum_notifications_type', defaultValue: 'system' },
       data: { type: Sequelize.JSONB, defaultValue: {} },
       isRead: { type: Sequelize.BOOLEAN, defaultValue: false },
     });
 
-    await queryInterface.createTable('Returns', {
+    await createTableIfMissing('Returns', {
       ...common,
       orderId: { type: Sequelize.UUID, allowNull: false, references: { model: 'Orders', key: 'id' } },
       orderItemId: { type: Sequelize.UUID, allowNull: false, references: { model: 'OrderItems', key: 'id' } },
       userId: { type: Sequelize.UUID, allowNull: false, references: { model: 'Users', key: 'id' } },
-      reason: { type: 'enum_Returns_reason', allowNull: false },
+      reason: { type: 'enum_returns_reason', allowNull: false },
       description: { type: Sequelize.TEXT },
       photos: { type: Sequelize.ARRAY(Sequelize.STRING), defaultValue: [] },
-      status: { type: 'enum_Returns_status', defaultValue: 'requested' },
+      status: { type: 'enum_returns_status', defaultValue: 'requested' },
       refundAmount: { type: Sequelize.DECIMAL(10, 2) },
       adminNotes: { type: Sequelize.TEXT },
     });
 
-    await queryInterface.createTable('Banners', {
+    await createTableIfMissing('Banners', {
       ...common,
       title: { type: Sequelize.STRING, allowNull: false },
       image: { type: Sequelize.STRING, allowNull: false },
-      targetType: { type: 'enum_Banners_targetType', defaultValue: 'none' },
+      targetType: { type: 'enum_banners_targettype', defaultValue: 'none' },
       targetId: { type: Sequelize.UUID },
       targetUrl: { type: Sequelize.STRING },
       isActive: { type: Sequelize.BOOLEAN, defaultValue: true },
@@ -286,11 +359,13 @@ module.exports = {
       endsAt: { type: Sequelize.DATE },
     });
 
-    await queryInterface.addIndex('Products', ['categoryId']);
-    await queryInterface.addIndex('Products', ['brandId']);
-    await queryInterface.addIndex('Products', ['isActive']);
-    await queryInterface.addIndex('Products', ['sellingPrice']);
-    await queryInterface.addIndex('Products', ['averageRating']);
+    await queryInterface.sequelize.query('ALTER TABLE "Products" ADD COLUMN IF NOT EXISTS "searchVector" TSVECTOR;');
+
+    try { await queryInterface.addIndex('Products', ['categoryId']); } catch (error) { if (!String(error.message).includes('already exists')) throw error; }
+    try { await queryInterface.addIndex('Products', ['brandId']); } catch (error) { if (!String(error.message).includes('already exists')) throw error; }
+    try { await queryInterface.addIndex('Products', ['isActive']); } catch (error) { if (!String(error.message).includes('already exists')) throw error; }
+    try { await queryInterface.addIndex('Products', ['sellingPrice']); } catch (error) { if (!String(error.message).includes('already exists')) throw error; }
+    try { await queryInterface.addIndex('Products', ['averageRating']); } catch (error) { if (!String(error.message).includes('already exists')) throw error; }
     await queryInterface.sequelize.query('CREATE INDEX IF NOT EXISTS products_search_vector_gin ON "Products" USING GIN ("searchVector");');
     await queryInterface.sequelize.query('CREATE INDEX IF NOT EXISTS products_tags_gin ON "Products" USING GIN ("tags");');
 
@@ -319,7 +394,7 @@ module.exports = {
     for (const table of ['Banners', 'Returns', 'Notifications', 'Reviews', 'CouponUsages', 'Coupons', 'Payments', 'OrderItems', 'Orders', 'Wishlists', 'CartItems', 'Carts', 'Inventories', 'ProductImages', 'ProductVariants', 'Products', 'Addresses', 'Brands', 'Categories', 'Users']) {
       await queryInterface.dropTable(table);
     }
-    for (const type of ['"enum_Banners_targetType"', '"enum_Returns_status"', '"enum_Returns_reason"', '"enum_Notifications_type"', '"enum_Reviews_fit"', '"enum_Coupons_type"', '"enum_Orders_paymentStatus"', '"enum_Orders_status"', '"enum_Payments_status"', '"enum_Addresses_type"', '"enum_Users_role"', '"enum_Users_gender"']) {
+    for (const type of ['"enum_banners_targettype"', '"enum_returns_status"', '"enum_returns_reason"', '"enum_notifications_type"', '"enum_reviews_fit"', '"enum_coupons_type"', '"enum_orders_paymentstatus"', '"enum_orders_status"', '"enum_payments_status"', '"enum_addresses_type"', '"enum_users_role"', '"enum_users_gender"']) {
       await queryInterface.sequelize.query(`DROP TYPE IF EXISTS ${type};`);
     }
   },

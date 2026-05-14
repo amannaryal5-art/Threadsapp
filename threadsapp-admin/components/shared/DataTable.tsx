@@ -26,7 +26,7 @@ export function DataTable<TData, TValue>({
   emptyTitle,
   emptyDescription,
 }: {
-  columns: ColumnDef<TData, TValue>[];
+  columns: ColumnDef<TData, any>[];
   data: TData[];
   isLoading?: boolean;
   searchPlaceholder?: string;

@@ -1,17 +1,33 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { OrderCard } from "@/components/orders/OrderCard";
 import { Pagination } from "@/components/shared/Pagination";
 import { ProfileSidebar } from "@/components/profile/ProfileSidebar";
-import { useOrders } from "@/hooks/useOrders";
+import { useOrders, useSyncPayment } from "@/hooks/useOrders";
 
 const tabs = ["all", "active", "delivered", "cancelled", "returns"] as const;
 
 export default function OrdersPage() {
   const [tab, setTab] = useState<(typeof tabs)[number]>("all");
   const { data } = useOrders(tab === "all" ? undefined : tab === "active" ? "shipped" : tab);
+  const syncPayment = useSyncPayment();
+  const syncedOrdersRef = useRef<Set<string>>(new Set());
   const orders = data?.data.orders ?? [];
+
+  useEffect(() => {
+    const pendingOrders = orders.filter((order) => order.status === "pending_payment" || order.paymentStatus === "pending");
+
+    pendingOrders.forEach((order) => {
+      if (syncedOrdersRef.current.has(order.id) || syncPayment.isPending) return;
+      syncedOrdersRef.current.add(order.id);
+      syncPayment.mutate(order.id, {
+        onError: () => {
+          syncedOrdersRef.current.delete(order.id);
+        },
+      });
+    });
+  }, [orders, syncPayment]);
 
   return (
     <main className="container py-8">

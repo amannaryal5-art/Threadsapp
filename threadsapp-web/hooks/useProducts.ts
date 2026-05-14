@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import api from "@/lib/axios";
+import { debugProductMedia } from "@/lib/product-media";
 import { getQueryString } from "@/lib/utils";
 import type { ApiResponse } from "@/types/api.types";
 import type { Product, ProductReview } from "@/types/product.types";
@@ -14,6 +15,9 @@ export function useHomeProducts() {
       queryKey: ["home", endpoint],
       queryFn: async () => {
         const response = await api.get<ApiResponse<{ products: T[] }>>(endpoint);
+        if (process.env.NODE_ENV !== "production") {
+          console.log(`[product-media] home:${endpoint}`, response.data.data.products);
+        }
         return response.data.data.products;
       }
     });
@@ -51,6 +55,7 @@ export function useProduct(slug: string) {
     queryKey: ["product", slug],
     queryFn: async () => {
       const response = await api.get<ApiResponse<{ product: Product }>>(`/products/${slug}`);
+      debugProductMedia(`hook.useProduct:${slug}`, response.data.data.product);
       return response.data.data.product;
     },
     enabled: Boolean(slug)
@@ -93,6 +98,9 @@ export function useProducts(filters: ProductFilters) {
     queryKey: ["products", query],
     queryFn: async () => {
       const response = await api.get<ApiResponse<{ products: Product[] }>>(`/products?${query}`);
+      if (process.env.NODE_ENV !== "production") {
+        response.data.data.products.forEach((product) => debugProductMedia(`hook.useProducts:${product.slug}`, product));
+      }
       return response.data;
     }
   });

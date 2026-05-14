@@ -1,10 +1,25 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const { sequelize } = require('../config/database');
 
-const cartSchema = new mongoose.Schema(
+const Cart = sequelize.define(
+  'Cart',
   {
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, unique: true, index: true },
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
+      allowNull: false,
+    },
+    userId: {
+      type: DataTypes.UUID,
+      allowNull: false,
+      unique: true,
+    },
   },
-  { timestamps: true },
+  {
+    tableName: 'Carts',
+    timestamps: true,
+  },
 );
 
-module.exports = mongoose.models.Cart || mongoose.model('Cart', cartSchema);
+module.exports = Cart;

@@ -1,5 +1,6 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const { Op } = require('sequelize');
 const { User } = require('../models');
 const runtimeStore = require('../lib/runtime-store');
 const ApiResponse = require('../utils/ApiResponse');
@@ -9,6 +10,7 @@ const generateTokens = require('../utils/generateTokens');
 const otpService = require('../services/otp.service');
 const emailService = require('../services/emailService');
 const { EmailDeliveryError } = require('../services/emailService');
+const { accessTokenSecret, refreshTokenSecret } = require('../config/auth');
 
 const normalizeEmail = (email) => email?.trim().toLowerCase();
 
@@ -26,11 +28,23 @@ exports.sendOtp = asyncHandler(async (req, res) => {
 
 exports.sendEmailOtp = asyncHandler(async (req, res) => {
   const normalizedEmail = normalizeEmail(req.body.email);
-  const existing = await User.findOne({ email: normalizedEmail });
+  const existing = await User.findOne({ where: { email: normalizedEmail } });
   if (existing) throw new ApiError(409, 'User already exists');
 
   try {
-    await otpService.sendEmailOtp(normalizedEmail, req.body.name);
+    const otpResult = await otpService.sendEmailOtp(normalizedEmail, req.body.name);
+    const isDevelopmentFallback = process.env.NODE_ENV !== 'production' && otpResult?.fallback;
+
+    return ApiResponse.success(
+      res,
+      isDevelopmentFallback
+        ? 'Verification code generated locally because email delivery is unavailable in development. Check backend terminal.'
+        : 'Verification code sent to your email',
+      {
+        email: normalizedEmail,
+        emailDelivered: Boolean(otpResult?.delivered),
+      },
+    );
   } catch (error) {
     if (error instanceof EmailDeliveryError) {
       throw new ApiError(
@@ -43,10 +57,6 @@ exports.sendEmailOtp = asyncHandler(async (req, res) => {
 
     throw error;
   }
-
-  return ApiResponse.success(res, 'Verification code sent to your email', {
-    email: normalizedEmail,
-  });
 });
 
 exports.verifyOtp = asyncHandler(async (req, res) => {
@@ -71,7 +81,11 @@ exports.register = asyncHandler(async (req, res) => {
     // if (!isVerified) throw new ApiError(400, 'Phone number not verified');
 
     const normalizedEmail = normalizeEmail(req.body.email);
-    const existing = await User.findOne({ $or: [{ phone: req.body.phone }, { email: normalizedEmail }] });
+    const existing = await User.findOne({
+      where: {
+        [Op.or]: [{ phone: req.body.phone }, { email: normalizedEmail }],
+      },
+    });
     if (existing) throw new ApiError(409, 'User already exists');
 
     const user = await User.create({
@@ -100,9 +114,9 @@ exports.login = asyncHandler(async (req, res) => {
   if (req.body.phone && req.body.otp) {
     const valid = await otpService.verifyOtp(req.body.phone, req.body.otp);
     if (!valid) throw new ApiError(400, 'Invalid OTP');
-    user = await User.findOne({ phone: req.body.phone });
+    user = await User.findOne({ where: { phone: req.body.phone } });
   } else if (req.body.email && req.body.password) {
-    user = await User.findOne({ email: normalizeEmail(req.body.email) }).select('+passwordHash');
+    user = await User.scope('withPassword').findOne({ where: { email: normalizeEmail(req.body.email) } });
     if (!user || !user.passwordHash || !(await bcrypt.compare(req.body.password, user.passwordHash))) {
       throw new ApiError(401, 'Invalid email or password');
     }
@@ -118,7 +132,7 @@ exports.login = asyncHandler(async (req, res) => {
 exports.adminLogin = asyncHandler(async (req, res) => {
   try {
     const normalizedEmail = normalizeEmail(req.body.email);
-    const user = await User.findOne({ email: normalizedEmail }).select('+passwordHash');
+    const user = await User.scope('withPassword').findOne({ where: { email: normalizedEmail } });
 
     if (!user || !user.passwordHash || !(await bcrypt.compare(req.body.password, user.passwordHash))) {
       throw new ApiError(401, 'Invalid email or password');
@@ -145,10 +159,10 @@ exports.adminLogin = asyncHandler(async (req, res) => {
 
 exports.refreshToken = asyncHandler(async (req, res) => {
   const { refreshToken } = req.body;
-  const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
+  const decoded = jwt.verify(refreshToken, refreshTokenSecret);
   const exists = await runtimeStore.get(`refresh:${decoded.id}:${refreshToken}`);
   if (!exists) throw new ApiError(401, 'Refresh token invalid or expired');
-  const user = await User.findById(decoded.id);
+  const user = await User.findByPk(decoded.id);
   const tokens = await generateTokens(user);
   return ApiResponse.success(res, 'Token refreshed successfully', tokens);
 });
@@ -156,17 +170,17 @@ exports.refreshToken = asyncHandler(async (req, res) => {
 exports.logout = asyncHandler(async (req, res) => {
   const { refreshToken } = req.body;
   if (refreshToken) {
-    const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
+    const decoded = jwt.verify(refreshToken, refreshTokenSecret);
     await runtimeStore.del(`refresh:${decoded.id}:${refreshToken}`);
   }
   return ApiResponse.success(res, 'Logout successful', {});
 });
 
 exports.forgotPassword = asyncHandler(async (req, res) => {
-  const user = await User.findOne({ email: normalizeEmail(req.body.email) });
+  const user = await User.findOne({ where: { email: normalizeEmail(req.body.email) } });
   if (!user) throw new ApiError(404, 'User not found');
 
-  const token = jwt.sign({ id: user.id }, process.env.JWT_ACCESS_SECRET, { expiresIn: '30m' });
+  const token = jwt.sign({ id: user.id }, accessTokenSecret, { expiresIn: '30m' });
   await runtimeStore.set(`reset:${token}`, user.id, 'EX', 30 * 60);
   const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${token}`;
   await emailService.sendPasswordReset(user, resetLink);
@@ -177,7 +191,7 @@ exports.forgotPassword = asyncHandler(async (req, res) => {
 exports.resetPassword = asyncHandler(async (req, res) => {
   const userId = await runtimeStore.get(`reset:${req.body.token}`);
   if (!userId) throw new ApiError(400, 'Reset token expired or invalid');
-  const user = await User.findById(userId).select('+passwordHash');
+  const user = await User.scope('withPassword').findByPk(userId);
   user.passwordHash = await bcrypt.hash(req.body.password, 10);
   await user.save();
   await runtimeStore.del(`reset:${req.body.token}`);

@@ -5,11 +5,13 @@ import { CartItem as CartItemCard } from "@/components/cart/CartItem";
 import { CartSummary } from "@/components/cart/CartSummary";
 import { CouponInput } from "@/components/cart/CouponInput";
 import { EmptyCart } from "@/components/cart/EmptyCart";
+import { useCart } from "@/hooks/useCart";
 import { useMoveToWishlist } from "@/hooks/useCart";
 import { useCartStore } from "@/store/cartStore";
 
 export default function CartPage() {
   const router = useRouter();
+  useCart();
   const cart = useCartStore();
   const moveToWishlist = useMoveToWishlist();
 
@@ -41,10 +43,13 @@ export default function CartPage() {
           <CouponInput onApply={async (couponCode) => ({ couponCode, savedAmount: 260 })} />
         </div>
         <CartSummary
+          mrpTotal={cart.mrpTotal}
           subtotal={cart.subtotal}
+          productDiscount={cart.productDiscount}
           couponDiscount={cart.couponDiscount}
           shippingCharge={cart.shippingCharge}
           taxAmount={cart.taxAmount}
+          totalAmount={cart.totalAmount}
           onCheckout={() => router.push("/checkout")}
         />
       </div>

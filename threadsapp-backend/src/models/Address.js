@@ -1,24 +1,83 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const { sequelize } = require('../config/database');
 
-const addressSchema = new mongoose.Schema(
+const Address = sequelize.define(
+  'Address',
   {
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
-    fullName: { type: String, required: true },
-    phone: { type: String, required: true },
-    flatNo: String,
-    building: String,
-    street: String,
-    area: String,
-    city: { type: String, required: true },
-    state: { type: String, required: true },
-    pincode: { type: String, required: true },
-    country: { type: String, default: 'India' },
-    type: { type: String, enum: ['home', 'work', 'other'], default: 'home' },
-    isDefault: { type: Boolean, default: false },
-    lat: Number,
-    lng: Number,
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
+      allowNull: false,
+    },
+    userId: {
+      type: DataTypes.UUID,
+      allowNull: false,
+    },
+    fullName: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    phone: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    flatNo: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    building: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    street: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    area: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    city: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    state: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    pincode: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    country: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: 'India',
+    },
+    type: {
+      type: DataTypes.ENUM('home', 'work', 'other'),
+      allowNull: false,
+      defaultValue: 'home',
+    },
+    isDefault: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
+    lat: {
+      type: DataTypes.FLOAT,
+      allowNull: true,
+    },
+    lng: {
+      type: DataTypes.FLOAT,
+      allowNull: true,
+    },
   },
-  { timestamps: true },
+  {
+    tableName: 'Addresses',
+    timestamps: true,
+  },
 );
 
-module.exports = mongoose.models.Address || mongoose.model('Address', addressSchema);
+module.exports = Address;

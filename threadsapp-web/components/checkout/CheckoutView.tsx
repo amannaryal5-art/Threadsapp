@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useCartStore } from "@/store/cartStore";
 import { useAuthStore } from "@/store/authStore";
 import { CheckoutStepper } from "@/components/checkout/CheckoutStepper";
@@ -13,6 +13,18 @@ export function CheckoutView() {
   const [selectedAddressId, setSelectedAddressId] = useState<string>();
   const cart = useCartStore();
   const user = useAuthStore((state) => state.user);
+
+  useEffect(() => {
+    if (!selectedAddressId && step > 1) {
+      setStep(1);
+    }
+  }, [selectedAddressId, step]);
+
+  useEffect(() => {
+    if (!cart.items.length && step > 1) {
+      setStep(1);
+    }
+  }, [cart.items.length, step]);
 
   return (
     <main className="container py-8">
@@ -27,7 +39,13 @@ export function CheckoutView() {
             subtotal={cart.subtotal}
             taxAmount={cart.taxAmount}
             shippingCharge={cart.shippingCharge}
-            onContinue={() => setStep(3)}
+            onContinue={() => {
+              if (!selectedAddressId) {
+                setStep(1);
+                return;
+              }
+              setStep(3);
+            }}
             onApplyCoupon={async (couponCode) => ({ couponCode, savedAmount: 260 })}
           />
         ) : null}
@@ -36,7 +54,7 @@ export function CheckoutView() {
             addressId={selectedAddressId}
             items={cart.items}
             couponCode={cart.couponCode}
-            totalAmount={Math.round(cart.subtotal + cart.taxAmount + cart.shippingCharge - cart.couponDiscount)}
+            totalAmount={cart.totalAmount}
             user={user}
           />
         ) : null}

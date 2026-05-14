@@ -1,21 +1,12 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import api from "@/lib/axios";
 import { AddAddressModal } from "@/components/checkout/AddAddressModal";
 import { AddressCard } from "@/components/profile/AddressCard";
 import { ProfileSidebar } from "@/components/profile/ProfileSidebar";
-import type { ApiResponse } from "@/types/api.types";
-import type { Address } from "@/types/user.types";
+import { useAddresses } from "@/hooks/useAddresses";
 
 export default function AddressesPage() {
-  const { data = [] } = useQuery({
-    queryKey: ["addresses"],
-    queryFn: async () => {
-      const response = await api.get<ApiResponse<{ addresses: Address[] }>>("/addresses");
-      return response.data.data.addresses;
-    }
-  });
+  const { data = [] } = useAddresses();
 
   return (
     <main className="container py-8">

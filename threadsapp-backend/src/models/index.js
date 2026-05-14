@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { sequelize } = require('../config/database');
 
 const models = {
   User: require('./User'),
@@ -24,6 +25,39 @@ const models = {
   Banner: require('./Banner'),
 };
 
+models.Address.belongsTo(models.User, { foreignKey: 'userId' });
+models.User.hasMany(models.Address, { foreignKey: 'userId', as: 'addresses' });
+models.Order.belongsTo(models.User, { foreignKey: 'userId' });
+models.Order.belongsTo(models.Address, { foreignKey: 'addressId' });
+models.User.hasMany(models.Order, { foreignKey: 'userId', as: 'orders' });
+models.Address.hasMany(models.Order, { foreignKey: 'addressId' });
+models.Order.hasMany(models.OrderItem, { foreignKey: 'orderId', as: 'items' });
+models.OrderItem.belongsTo(models.Order, { foreignKey: 'orderId' });
+models.OrderItem.belongsTo(models.Product, { foreignKey: 'productId' });
+models.OrderItem.belongsTo(models.ProductVariant, { foreignKey: 'variantId' });
+models.Order.hasOne(models.Payment, { foreignKey: 'orderId', as: 'payment' });
+models.Payment.belongsTo(models.Order, { foreignKey: 'orderId' });
+models.Payment.belongsTo(models.User, { foreignKey: 'userId' });
+models.User.hasMany(models.Payment, { foreignKey: 'userId', as: 'payments' });
+models.Product.belongsTo(models.Category, { foreignKey: 'categoryId' });
+models.Product.belongsTo(models.Brand, { foreignKey: 'brandId' });
+models.Product.hasMany(models.ProductImage, { foreignKey: 'productId', as: 'images' });
+models.Product.hasMany(models.ProductVariant, { foreignKey: 'productId', as: 'variants' });
+models.ProductVariant.belongsTo(models.Product, { foreignKey: 'productId' });
+models.ProductVariant.hasOne(models.Inventory, { foreignKey: 'variantId', as: 'inventory' });
+models.Inventory.belongsTo(models.ProductVariant, { foreignKey: 'variantId', as: 'variant' });
+models.ProductImage.belongsTo(models.Product, { foreignKey: 'productId' });
+models.ProductImage.belongsTo(models.ProductVariant, { foreignKey: 'variantId', as: 'variant' });
+models.ProductVariant.hasMany(models.ProductImage, { foreignKey: 'variantId', as: 'variantImages' });
+models.Cart.belongsTo(models.User, { foreignKey: 'userId' });
+models.User.hasOne(models.Cart, { foreignKey: 'userId', as: 'cart' });
+models.Cart.hasMany(models.CartItem, { foreignKey: 'cartId', as: 'items' });
+models.CartItem.belongsTo(models.Cart, { foreignKey: 'cartId' });
+models.CartItem.belongsTo(models.Product, { foreignKey: 'productId' });
+models.CartItem.belongsTo(models.ProductVariant, { foreignKey: 'variantId' });
+models.Product.hasMany(models.CartItem, { foreignKey: 'productId' });
+models.ProductVariant.hasMany(models.CartItem, { foreignKey: 'variantId' });
+
 const normalizeFilter = (options = {}) => options.where || options;
 const normalizeSort = (order) => {
   if (!Array.isArray(order)) return undefined;
@@ -35,6 +69,11 @@ const normalizeSort = (order) => {
 };
 
 Object.values(models).forEach((Model) => {
+  const isMongooseModel = typeof Model.find === 'function' && typeof Model.updateMany === 'function';
+  if (!isMongooseModel) {
+    return;
+  }
+
   if (!Model.findAll) {
     Model.findAll = async (options = {}) => {
       const query = Model.find(normalizeFilter(options));
@@ -83,14 +122,5 @@ Object.values(models).forEach((Model) => {
     };
   }
 });
-
-const sequelize = {
-  authenticate: async () => true,
-  transaction: async () => ({
-    LOCK: { UPDATE: 'UPDATE' },
-    commit: async () => {},
-    rollback: async () => {},
-  }),
-};
 
 module.exports = { sequelize, ...models, mongoose };

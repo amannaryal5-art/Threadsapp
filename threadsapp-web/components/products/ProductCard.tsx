@@ -1,12 +1,15 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
+import { useEffect } from "react";
 import { motion } from "framer-motion";
 import { Heart, ShoppingBag } from "lucide-react";
 import toast from "react-hot-toast";
 import { PriceBadge } from "@/components/shared/PriceBadge";
+import { ProductImage } from "@/components/shared/ProductImage";
 import { StarRating } from "@/components/shared/StarRating";
+import { debugProductMedia, getProductImages, getProductThumbnail } from "@/lib/product-media";
+import { getFirstAvailableVariant, getVariantMrp, getVariantSellingPrice } from "@/lib/pricing";
 import { useCartStore } from "@/store/cartStore";
 import { useUiStore } from "@/store/uiStore";
 import { useWishlistStore } from "@/store/wishlistStore";
@@ -17,19 +20,25 @@ export function ProductCard({ product, compact = false }: { product: Product; co
   const isWishlisted = useWishlistStore((state) => state.isWishlisted(product.id));
   const addItem = useCartStore((state) => state.addItem);
   const openCartDrawer = useUiStore((state) => state.openCartDrawer);
-  const images = product.images ?? [];
-  const primary = images[0]?.url ?? "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=600&q=80";
+  const images = getProductImages(product);
+  const primary = getProductThumbnail(product);
   const secondary = images[1]?.url ?? primary;
-  const firstVariant = product.variants?.find((variant) => (variant.inventory?.quantity ?? 0) > 0) ?? product.variants?.[0];
+  const firstVariant = getFirstAvailableVariant(product);
   const canAddToCart = Boolean(firstVariant);
+  const displayPrice = getVariantSellingPrice(product, firstVariant);
+  const displayMrp = getVariantMrp(product, firstVariant);
+
+  useEffect(() => {
+    debugProductMedia(`ProductCard:${product.slug}`, product);
+  }, [product]);
 
   return (
     <motion.article whileHover={{ scale: 1.02 }} className="group overflow-hidden rounded-[28px] bg-white p-4 shadow-soft">
       <div className="relative overflow-hidden rounded-[22px] bg-background">
         <Link href={`/products/${product.slug}`}>
           <div className={`relative ${compact ? "h-52" : "h-72"}`}>
-            <Image src={primary} alt={product.name} fill className="object-cover transition duration-300 group-hover:opacity-0" />
-            <Image src={secondary} alt={product.name} fill className="object-cover opacity-0 transition duration-300 group-hover:opacity-100" />
+            <ProductImage src={primary} alt={product.name} className="object-cover transition duration-300 group-hover:opacity-0" sizes={compact ? "208px" : "288px"} />
+            <ProductImage src={secondary} alt={product.name} className="object-cover opacity-0 transition duration-300 group-hover:opacity-100" sizes={compact ? "208px" : "288px"} />
           </div>
         </Link>
         <button
@@ -71,7 +80,7 @@ export function ProductCard({ product, compact = false }: { product: Product; co
           {product.name}
         </Link>
         <div className="mt-3">
-          <PriceBadge price={product.sellingPrice} mrp={product.basePrice} discount={product.discountPercent} />
+          <PriceBadge price={displayPrice} mrp={displayMrp} discount={product.discountPercent} />
         </div>
         <div className="mt-3 flex items-center gap-2">
           <StarRating rating={product.averageRating || 4} />

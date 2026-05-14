@@ -1,30 +1,110 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const { sequelize } = require('../config/database');
 
-const orderSchema = new mongoose.Schema(
+const Order = sequelize.define(
+  'Order',
   {
-    orderNumber: { type: String, required: true, unique: true, index: true },
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
-    addressId: { type: mongoose.Schema.Types.ObjectId, ref: 'Address', required: true },
-    status: { type: String, enum: ['pending_payment', 'confirmed', 'processing', 'shipped', 'out_for_delivery', 'delivered', 'cancelled', 'return_requested', 'return_picked', 'refunded'], default: 'pending_payment' },
-    paymentStatus: { type: String, enum: ['pending', 'paid', 'failed', 'refunded'], default: 'pending' },
-    subtotal: { type: Number, required: true },
-    discountAmount: { type: Number, default: 0 },
-    couponCode: String,
-    couponDiscount: { type: Number, default: 0 },
-    shippingCharge: { type: Number, default: 0 },
-    taxAmount: { type: Number, required: true },
-    totalAmount: { type: Number, required: true },
-    shiprocketOrderId: String,
-    shiprocketShipmentId: String,
-    trackingNumber: String,
-    courierName: String,
-    trackingUrl: String,
-    estimatedDelivery: String,
-    deliveredAt: Date,
-    notes: String,
-    invoiceUrl: String,
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
+      allowNull: false,
+    },
+    orderNumber: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      unique: true,
+    },
+    userId: {
+      type: DataTypes.UUID,
+      allowNull: false,
+    },
+    addressId: {
+      type: DataTypes.UUID,
+      allowNull: false,
+    },
+    status: {
+      type: DataTypes.ENUM('pending_payment', 'confirmed', 'processing', 'shipped', 'out_for_delivery', 'delivered', 'cancelled', 'return_requested', 'return_picked', 'refunded'),
+      allowNull: false,
+      defaultValue: 'pending_payment',
+    },
+    paymentStatus: {
+      type: DataTypes.ENUM('pending', 'paid', 'failed', 'refunded'),
+      allowNull: false,
+      defaultValue: 'pending',
+    },
+    subtotal: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: false,
+    },
+    discountAmount: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: false,
+      defaultValue: 0,
+    },
+    couponCode: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    couponDiscount: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: false,
+      defaultValue: 0,
+    },
+    shippingCharge: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: false,
+      defaultValue: 0,
+    },
+    taxAmount: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: false,
+    },
+    totalAmount: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: false,
+    },
+    shiprocketOrderId: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    shiprocketShipmentId: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    trackingNumber: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    courierName: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    trackingUrl: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    estimatedDelivery: {
+      type: DataTypes.DATEONLY,
+      allowNull: true,
+    },
+    deliveredAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    notes: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    invoiceUrl: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
   },
-  { timestamps: true },
+  {
+    tableName: 'Orders',
+    timestamps: true,
+  },
 );
 
-module.exports = mongoose.models.Order || mongoose.model('Order', orderSchema);
+module.exports = Order;

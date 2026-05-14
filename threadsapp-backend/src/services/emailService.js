@@ -14,25 +14,63 @@ const EMAIL_PROVIDER = (process.env.EMAIL_PROVIDER || '').trim().toLowerCase();
 const EMAIL_FROM = process.env.EMAIL_FROM || process.env.EMAIL_USER || 'no-reply@threadsapp.local';
 const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
 const normalizedEmailPass = (process.env.EMAIL_PASS || '').replace(/\s+/g, '');
+const normalizedEmailUser = (process.env.EMAIL_USER || '').trim();
+const isGmailHost = String(process.env.EMAIL_HOST || 'smtp.gmail.com').trim().toLowerCase() === 'smtp.gmail.com';
+
+function parseBoolean(value, fallback = false) {
+  if (typeof value !== 'string') return fallback;
+  const normalized = value.trim().toLowerCase();
+  if (['true', '1', 'yes', 'on'].includes(normalized)) return true;
+  if (['false', '0', 'no', 'off'].includes(normalized)) return false;
+  return fallback;
+}
+
+function resolveFromAddress() {
+  const trimmed = String(EMAIL_FROM || '').trim();
+  if (!trimmed) {
+    return 'ThreadsApp <no-reply@threadsapp.local>';
+  }
+
+  if (trimmed.includes('<') && trimmed.includes('>')) {
+    return trimmed;
+  }
+
+  return `ThreadsApp <${trimmed}>`;
+}
+
+function buildSmtpConfig() {
+  const baseConfig = {
+    host: process.env.EMAIL_HOST || 'smtp.gmail.com',
+    port: Number(process.env.EMAIL_PORT || 587),
+    secure: parseBoolean(process.env.EMAIL_SECURE, false),
+    auth: {
+      user: normalizedEmailUser,
+      pass: normalizedEmailPass,
+    },
+    requireTLS: !parseBoolean(process.env.EMAIL_SECURE, false),
+    connectionTimeout: Number(process.env.EMAIL_CONNECTION_TIMEOUT_MS || 10000),
+    greetingTimeout: Number(process.env.EMAIL_GREETING_TIMEOUT_MS || 10000),
+    socketTimeout: Number(process.env.EMAIL_SOCKET_TIMEOUT_MS || 15000),
+    tls: {
+      rejectUnauthorized: parseBoolean(process.env.EMAIL_TLS_REJECT_UNAUTHORIZED, false),
+    },
+  };
+
+  if (isGmailHost) {
+    return {
+      ...baseConfig,
+      service: 'gmail',
+      host: undefined,
+      port: undefined,
+    };
+  }
+
+  return baseConfig;
+}
 
 const smtpTransporter =
-  process.env.EMAIL_USER && normalizedEmailPass
-    ? nodemailer.createTransport({
-        host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-        port: Number(process.env.EMAIL_PORT || 587),
-        secure: String(process.env.EMAIL_SECURE || 'false') === 'true',
-        auth: {
-          user: process.env.EMAIL_USER,
-          pass: normalizedEmailPass,
-        },
-        requireTLS: true,
-        connectionTimeout: Number(process.env.EMAIL_CONNECTION_TIMEOUT_MS || 10000),
-        greetingTimeout: Number(process.env.EMAIL_GREETING_TIMEOUT_MS || 10000),
-        socketTimeout: Number(process.env.EMAIL_SOCKET_TIMEOUT_MS || 15000),
-        tls: {
-          rejectUnauthorized: process.env.EMAIL_TLS_REJECT_UNAUTHORIZED !== 'false',
-        },
-      })
+  normalizedEmailUser && normalizedEmailPass
+    ? nodemailer.createTransport(buildSmtpConfig())
     : null;
 
 function resolveProvider() {
@@ -86,7 +124,7 @@ async function verifyTransport() {
       await smtpTransporter.verify();
       console.log('Email service ready via SMTP');
     } catch (error) {
-      console.error('Email service failed:', error.message);
+      console.error('Email service failed:', error.code || error.message);
     }
     return;
   }
@@ -159,7 +197,7 @@ async function sendViaSmtp({ to, subject, html, attachments = [] }) {
 
   try {
     const info = await smtpTransporter.sendMail({
-      from: `"ThreadsApp" <${EMAIL_FROM}>`,
+      from: resolveFromAddress(),
       to,
       subject,
       html,
@@ -169,9 +207,18 @@ async function sendViaSmtp({ to, subject, html, attachments = [] }) {
     console.log('Email sent via SMTP:', info.messageId);
     return info;
   } catch (error) {
-    throw new EmailDeliveryError(`SMTP delivery failed: ${error.message}`, {
+    const message =
+      error.code === 'EAUTH'
+        ? 'SMTP authentication failed. Check EMAIL_USER and Gmail app password.'
+        : error.code === 'EENVELOPE'
+          ? 'SMTP sender or recipient address is invalid.'
+          : error.code === 'ESOCKET' || error.code === 'ECONNECTION' || error.code === 'ETIMEDOUT' || error.code === 'EACCES'
+            ? 'SMTP connection failed. Check firewall, antivirus, VPN, or outbound port 587 access.'
+            : `SMTP delivery failed: ${error.message}`;
+
+    throw new EmailDeliveryError(message, {
       code: error.code || 'SMTP_DELIVERY_FAILED',
-      retryable: true,
+      retryable: !['EAUTH', 'EENVELOPE'].includes(error.code),
       cause: error,
     });
   }

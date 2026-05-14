@@ -1,13 +1,16 @@
 import type { Address } from "@/types/user.types";
 
 export type OrderStatus =
-  | "placed"
+  | "pending_payment"
   | "confirmed"
+  | "processing"
   | "shipped"
   | "out_for_delivery"
   | "delivered"
   | "cancelled"
-  | "return_requested";
+  | "return_requested"
+  | "return_picked"
+  | "refunded";
 
 export interface OrderItem {
   id: string;
@@ -38,6 +41,17 @@ export interface PaymentInfo {
   currency: string;
   status: string;
   method?: string | null;
+}
+
+export interface RazorpayOrder {
+  id: string;
+  entity: string;
+  amount: number;
+  amount_paid: number;
+  amount_due: number;
+  currency: string;
+  receipt?: string | null;
+  status: string;
 }
 
 export interface Order {

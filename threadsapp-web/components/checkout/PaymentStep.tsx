@@ -85,19 +85,19 @@ export function PaymentStep({
                 return;
               }
 
-              await launchRazorpayCheckout({
+                await launchRazorpayCheckout({
                 orderId: order.id,
-                totalAmount,
                 email: user?.email,
                 contact: user?.phone,
                 onSuccess: async (id) => {
                   await clearCart();
                   router.push(`/checkout/success?orderId=${id}&orderNumber=${encodeURIComponent(order.orderNumber)}`);
                 },
-                onFailure: () => toast.error("Payment interrupted. Please retry."),
+                onFailure: () => toast.error("Payment interrupted or verification failed. Please retry."),
               });
-            } catch {
-              toast.error("Payment failed. Please retry.");
+            } catch (error) {
+              const message = error instanceof Error ? error.message : "Payment failed. Please retry.";
+              toast.error(message);
             } finally {
               setSubmitting(false);
             }

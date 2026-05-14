@@ -1,7 +1,5 @@
 const twilio = require('twilio');
-const crypto = require('crypto');
 const runtimeStore = require('../lib/runtime-store');
-const { EmailOtp } = require('../models');
 const { sendOTPEmail } = require('./emailService');
 
 const client =
@@ -10,11 +8,15 @@ const client =
     : null;
 
 const generateOtp = () => `${Math.floor(100000 + Math.random() * 900000)}`;
-const hashOtp = (otp) => crypto.createHash('sha256').update(String(otp)).digest('hex');
 
 exports.sendOtp = async (phone) => {
-  const otp = process.env.NODE_ENV === 'production' ? generateOtp() : '123456';
+  const isDevelopment = process.env.NODE_ENV !== 'production';
+  const otp = generateOtp();
   await runtimeStore.set(`otp:${phone}`, otp, 'EX', 5 * 60);
+
+  if (isDevelopment) {
+    console.log(`DEV PHONE OTP for ${phone}: ${otp}`);
+  }
 
   if (client && process.env.TWILIO_PHONE_NUMBER) {
     await client.messages.create({
@@ -38,31 +40,27 @@ exports.verifyOtp = async (phone, otp) => {
 };
 
 exports.sendEmailOtp = async (email, name) => {
+  const isDevelopment = process.env.NODE_ENV !== 'production';
   const otp = generateOtp();
   const normalizedEmail = email.trim().toLowerCase();
-  const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
-
   await runtimeStore.set(`email_otp:${normalizedEmail}`, otp, 'EX', 10 * 60);
-  await EmailOtp.findOneAndUpdate(
-    { email: normalizedEmail },
-    {
-      email: normalizedEmail,
-      otpHash: hashOtp(otp),
-      expiresAt,
-    },
-    {
-      upsert: true,
-      new: true,
-      setDefaultsOnInsert: true,
-    },
-  );
 
   try {
     await sendOTPEmail(normalizedEmail, otp, name);
-    return { delivered: true };
+    if (isDevelopment) {
+      console.log(`DEV EMAIL OTP sent for ${normalizedEmail}`);
+    }
+
+    return { delivered: true, fallback: false };
   } catch (error) {
+    if (isDevelopment) {
+      console.warn(`Email OTP delivery failed in development for ${normalizedEmail}.`);
+      console.warn(`Use this OTP from backend terminal: ${otp}`);
+      console.warn(`Email delivery error: ${error.message}`);
+      return { delivered: false, fallback: true };
+    }
+
     await runtimeStore.del(`email_otp:${normalizedEmail}`);
-    await EmailOtp.deleteOne({ email: normalizedEmail });
     throw error;
   }
 };
@@ -73,26 +71,8 @@ exports.verifyEmailOtp = async (email, otp) => {
 
   if (cachedOtp && cachedOtp === otp) {
     await runtimeStore.del(`email_otp:${normalizedEmail}`);
-    await EmailOtp.deleteOne({ email: normalizedEmail });
     return { valid: true };
   }
 
-  const storedOtp = await EmailOtp.findOne({ email: normalizedEmail });
-  if (!storedOtp) {
-    return { valid: false, reason: 'missing' };
-  }
-
-  if (storedOtp.expiresAt.getTime() <= Date.now()) {
-    await EmailOtp.deleteOne({ email: normalizedEmail });
-    await runtimeStore.del(`email_otp:${normalizedEmail}`);
-    return { valid: false, reason: 'expired' };
-  }
-
-  if (storedOtp.otpHash !== hashOtp(otp)) {
-    return { valid: false, reason: 'invalid' };
-  }
-
-  await runtimeStore.del(`email_otp:${normalizedEmail}`);
-  await EmailOtp.deleteOne({ email: normalizedEmail });
-  return { valid: true };
+  return { valid: false, reason: 'invalid' };
 };

@@ -4,11 +4,10 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
-const mongoose = require('mongoose');
 const rateLimit = require('express-rate-limit');
+const path = require('path');
 const routes = require('./routes');
-const { sequelize } = require('./models');
-const { isRedisReady } = require('./config/redis');
+const { sequelize } = require('./config/database');
 const { getEmailProviderStatus } = require('./services/emailService');
 const logger = require('./utils/logger');
 const ApiResponse = require('./utils/ApiResponse');
@@ -28,15 +27,30 @@ const allowedOrigins = new Set(
   [
     'http://localhost:3000',
     'http://localhost:3001',
+    'http://127.0.0.1',
+    'http://127.0.0.1:3000',
+    'http://127.0.0.1:3001',
     ...configuredOrigins,
   ].filter(Boolean),
 );
 
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  limit: 100,
+  limit: 500,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => {
+    // Skip rate limiting for authenticated requests to /addresses
+    return req.path.includes('/addresses') && req.user;
+  },
+});
+
+const addressLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 50,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => req.method === 'GET',
 });
 
 const otpLimiter = rateLimit({
@@ -63,16 +77,18 @@ app.use(
     credentials: true,
   }),
 );
+app.use('/api/v1/payments/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true }));
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 app.use(morgan('combined', { stream: { write: (message) => logger.info(message.trim()) } }));
 app.use(generalLimiter);
+app.use('/api/v1/addresses', addressLimiter);
 app.use('/api/v1/auth/send-otp', otpLimiter);
 app.use('/api/v1/auth/verify-otp', otpLimiter);
 
 app.get('/api/v1/health', async (_req, res) => {
   let database = 'down';
-  let mongo = 'down';
 
   try {
     await sequelize.authenticate();
@@ -81,18 +97,11 @@ app.get('/api/v1/health', async (_req, res) => {
     logger.error(`Health database error: ${error.message}`);
   }
 
-  if (mongoose.connection.readyState === 1) {
-    mongo = 'up';
-  } else if (mongoose.connection.readyState === 2) {
-    mongo = 'connecting';
-  }
-
   const email = getEmailProviderStatus();
 
   return ApiResponse.success(res, 'Health check fetched successfully', {
     database,
-    mongo,
-    cache: isRedisReady() ? 'redis' : 'in-memory',
+    cache: 'in-memory',
     email,
     uptime: process.uptime(),
     platform: process.env.PLATFORM_NAME || 'ThreadsApp',
